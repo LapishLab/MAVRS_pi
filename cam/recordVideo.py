@@ -11,12 +11,7 @@ os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn 
 #os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
 os.environ["DISPLAY"] = ':0' 
 
-def endRecording(sig, frame):
-    picam2.stop()
-    if not args.noSave:
-        picam2.stop_encoder()
-    print('recordVideo.py finished')
-    sys.exit(0)
+
 
 #Turn off Info and warning logging
 Picamera2.set_logging(Picamera2.ERROR)
@@ -99,8 +94,8 @@ if not args.noSave:
         os.makedirs(saveDirectory)
 
     now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    saveFile = saveDirectory + now
-    print('SavingFile as '+saveFile)
+    saveFile = saveDirectory + '/' + now
+    
     
     output = FfmpegOutput(
         output_filename=saveFile+'.mp4',
@@ -110,12 +105,18 @@ if not args.noSave:
         encoder=encoder,
         output=output
         )
+picam2.start()
+
+#Record for specified duration
+def endRecording(sig, frame):
+    picam2.stop()
+    if not args.noSave:
+        picam2.stop_encoder()
+    print('recordVideo.py finished')
+    sys.exit(0)
 
 signal.signal(signal.SIGINT, endRecording)
 signal.signal(signal.SIGTERM, endRecording)
-
-#Record for specified duration
-picam2.start()
 print('waiting for a duration of '+str(args.duration) + ' seconds')
 time.sleep(args.duration)
 endRecording(0,None)
