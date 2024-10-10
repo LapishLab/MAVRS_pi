@@ -1,5 +1,9 @@
 #!/usr/bin/python3
-import warnings, signal, sys, os, argparse, time
+import signal, os
+from sys import exit
+from warnings import warn
+from time import sleep
+from argparse import ArgumentParser
 from datetime import datetime
 from picamera2 import Picamera2, Preview
 from picamera2.encoders import H264Encoder
@@ -18,7 +22,7 @@ Picamera2.set_logging(Picamera2.ERROR)
 os.environ["LIBCAMERA_LOG_LEVELS"]="3"
 
 #Parse recording settings
-parser = argparse.ArgumentParser(description='Display and record video.')
+parser = ArgumentParser(description='Display and record video.')
 parser.add_argument('--duration', 
                     type=int, 
                     help='Recording duration in seconds (default=86400s)',
@@ -91,7 +95,7 @@ if not args.noSave:
     saveDirectory=dataDir + args.saveDir
 
     if os.path.exists(saveDirectory):
-        warnings.warn("directory already exists. Other videos could already be in "+saveDirectory)
+        warn("directory already exists. Other videos could already be in "+saveDirectory)
     else:
         os.makedirs(saveDirectory)
 
@@ -115,10 +119,10 @@ def endRecording(sig, frame):
     if not args.noSave:
         picam2.stop_encoder()
     print('recordVideo.py finished')
-    sys.exit(0)
+    exit(0)
 
 signal.signal(signal.SIGINT, endRecording)
 signal.signal(signal.SIGTERM, endRecording)
 print('waiting for a duration of '+str(args.duration) + ' seconds')
-time.sleep(args.duration)
+sleep(args.duration)
 endRecording(0,None)
