@@ -85,7 +85,9 @@ if not args.noSave:
     scriptPath = os.path.dirname(__file__)
     dataDir = os.path.dirname(scriptPath) + '/data/'
     if args.saveDir is None:
-        args.saveDir=datetime.now().strftime("%Y%m%d_%H%M%S")
+        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        hostname = os.uname().nodename
+        args.saveDir= now + '/' + hostname
     saveDirectory=dataDir + args.saveDir
 
     if os.path.exists(saveDirectory):
