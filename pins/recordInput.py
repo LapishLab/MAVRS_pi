@@ -51,7 +51,7 @@ def log_event(pin,event):
         writer.writerow({'Time': timeString, 'Pin': pin, 'Event': event}) 
 
 # Set up the GPIO pins and add event detection 
-buttons = [Button(pin) for pin in pins] 
+buttons = [Button(pin,bounce_time=0.1) for pin in pins]
 for button in buttons: 
     button.when_released = lambda pin=button.pin.number: log_event(pin,'1') 
     button.when_pressed = lambda pin=button.pin.number: log_event(pin,'0') 
