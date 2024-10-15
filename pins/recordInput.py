@@ -35,8 +35,8 @@ if os.path.exists(saveDirectory):
 else:
     os.makedirs(saveDirectory)
 
-
-saveFile = saveDirectory + '/DigitalIn.csv'
+now = datetime.now().strftime("%Y%m%d_%H%M%S")
+saveFile = saveDirectory + '/' + now + '.csv'
 print('SavingFile as '+saveFile)
 
 # Create or open the CSV file and write the header 
