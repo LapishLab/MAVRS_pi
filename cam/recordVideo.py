@@ -8,7 +8,7 @@ from datetime import datetime
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import FfmpegOutput
-from picamera2.Preview import QTGL
+from picamera2 import Preview
 from libcamera import Transform
 
 
@@ -64,7 +64,7 @@ picam2.configure(config)
 #Start preview window
 print('Starting preview window')
 picam2.start_preview(
-    QTGL, 
+    Preview.QTGL, 
     width=800, 
     height=480, 
     x=0, 
