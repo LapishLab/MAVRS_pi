@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 import os
-from warnings import warn
+#from warnings import warn
 from argparse import ArgumentParser
 from datetime import datetime
 
@@ -30,9 +30,7 @@ if args.saveDir is None:
 saveDirectory=dataDir + args.saveDir
 
 
-if os.path.exists(saveDirectory):
-    warn("directory already exists. Other recordings could already be in "+saveDirectory)
-else:
+if not os.path.exists(saveDirectory):
     os.makedirs(saveDirectory)
 print('SavingFile in '+saveDirectory)
 

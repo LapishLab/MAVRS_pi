@@ -1,7 +1,7 @@
 #! /bin/python
 import signal, os
 from sys import exit
-from warnings import warn
+#from warnings import warn
 from time import sleep
 from argparse import ArgumentParser
 from gpiozero import Button 
@@ -30,9 +30,7 @@ if args.saveDir is None:
         args.saveDir= now + '/' + hostname
 saveDirectory=dataDir + args.saveDir
 
-if os.path.exists(saveDirectory):
-    warn("directory already exists. Other recordings could already be in "+saveDirectory)
-else:
+if not os.path.exists(saveDirectory):
     os.makedirs(saveDirectory)
 
 now = datetime.now().strftime("%Y%m%d_%H%M%S")
