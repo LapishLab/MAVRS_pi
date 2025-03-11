@@ -10,77 +10,6 @@ from picamera2.encoders import H264Encoder
 from picamera2.outputs import FfmpegOutput
 from picamera2 import Preview
 from libcamera import Transform
-def system_config():
-    os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
-    #os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
-    os.environ["DISPLAY"] = ':0' 
-
-    #Turn off Info and warning logging
-    Picamera2.set_logging(Picamera2.ERROR)
-    os.environ["LIBCAMERA_LOG_LEVELS"]="3"
-
-def configure_camera(picam2, mode):
-    print('configuring camera')
-    config = picam2.create_video_configuration(
-        sensor={
-            'output_size': mode['size'],
-            'bit_depth': mode['bit_depth']
-        }
-    )
-    picam2.configure(config)
-
-def configure_preview(picam2):
-    print('Starting preview window')
-    picam2.start_preview(
-        Preview.QTGL, 
-        width=800, 
-        height=480, 
-        x=0, 
-        y=0,
-        transform=Transform(
-            hflip=1,
-            vflip=1
-        )
-    )
-    picam2.title_fields = [
-        "ExposureTime",
-        "FrameDuration",
-        "Lux"
-        ]
-
-
-def start_recording(picam2, bitrate, fps, saveFile):
-    print('Setting up H264 encoder')
-    encoder = H264Encoder(
-        bitrate=bitrate,
-        framerate=fps
-    )
-    output = FfmpegOutput(
-        output_filename=saveFile+'.mp4',
-        pts=saveFile+'.pts'
-    )
-    picam2.start_encoder(
-        encoder=encoder,
-        output=output
-    )
-
-
-def parse_save_file(saveDir):
-    scriptPath = os.path.dirname(__file__)
-    dataDir = os.path.dirname(scriptPath) + '/data/'
-    if saveDir is None:
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
-        hostname = os.uname().nodename
-        saveDir= now + '/' + hostname
-    saveDirectory=dataDir + saveDir
-
-    if not os.path.exists(saveDirectory):
-        os.makedirs(saveDirectory)
-
-    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    saveFile = saveDirectory + '/' + now
-    return saveFile
-
 
 def main():
     args = parse_arguments()
@@ -132,6 +61,83 @@ def parse_arguments():
                         default='10000000'
                         )
     return parser.parse_args()
+
+def system_config():
+    os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
+    #os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
+    os.environ["DISPLAY"] = ':0' 
+
+    #Turn off Info and warning logging
+    Picamera2.set_logging(Picamera2.ERROR)
+    os.environ["LIBCAMERA_LOG_LEVELS"]="3"
+
+def configure_camera(picam2, mode):
+    print('configuring camera')
+    config = picam2.create_video_configuration(
+        sensor={
+            'output_size': mode['size'],
+            'bit_depth': mode['bit_depth']
+        }
+    )
+    picam2.configure(config)
+
+def configure_preview(picam2):
+    print('Starting preview window')
+    picam2.start_preview(
+        Preview.QTGL, 
+        width=800, 
+        height=480, 
+        x=0, 
+        y=0,
+        transform=Transform(
+            hflip=1,
+            vflip=1
+        )
+    )
+    picam2.title_fields = [
+        "ExposureTime",
+        "FrameDuration",
+        "Lux"
+        ]
+
+def parse_save_file(saveDir):
+    scriptPath = os.path.dirname(__file__)
+    dataDir = os.path.dirname(scriptPath) + '/data/'
+    if saveDir is None:
+        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        hostname = os.uname().nodename
+        saveDir= now + '/' + hostname
+    saveDirectory=dataDir + saveDir
+
+    if not os.path.exists(saveDirectory):
+        os.makedirs(saveDirectory)
+
+    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    saveFile = saveDirectory + '/' + now
+    return saveFile
+
+def start_recording(picam2, bitrate, fps, saveFile):
+    print('Setting up H264 encoder')
+    encoder = H264Encoder(
+        bitrate=bitrate,
+        framerate=fps
+    )
+    output = FfmpegOutput(
+        output_filename=saveFile+'.mp4',
+        pts=saveFile+'.pts'
+    )
+    picam2.start_encoder(
+        encoder=encoder,
+        output=output
+    )
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     main()
