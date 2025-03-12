@@ -11,16 +11,17 @@ from picamera2.outputs import FfmpegOutput
 from picamera2 import Preview
 from libcamera import Transform
 
+picam2 = None
+sensor_mode = None
+
 def main():
     args = parse_arguments()
-    system_config()
-    picam2 = Picamera2()
-    mode = picam2.sensor_modes[args.sensorMode]
-    configure_camera(picam2, mode)
-    configure_preview(picam2)
+    system_config(args)
+    configure_camera()
+    configure_preview()
     if not args.noSave:
         saveFile = parse_save_file(args.saveDir)
-        start_recording(picam2, args.bitrate, mode['fps'], saveFile)
+        start_recording(args.bitrate, saveFile)
     picam2.start()
 
     #Record for specified duration
@@ -62,7 +63,7 @@ def parse_arguments():
                         )
     return parser.parse_args()
 
-def system_config():
+def system_config(args):
     os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
     #os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
     os.environ["DISPLAY"] = ':0' 
@@ -71,17 +72,22 @@ def system_config():
     Picamera2.set_logging(Picamera2.ERROR)
     os.environ["LIBCAMERA_LOG_LEVELS"]="3"
 
-def configure_camera(picam2, mode):
+    global picam2
+    picam2 = Picamera2()
+    global sensor_mode
+    sensor_mode = picam2.sensor_modes[args.sensorMode]
+
+def configure_camera():
     print('configuring camera')
     config = picam2.create_video_configuration(
         sensor={
-            'output_size': mode['size'],
-            'bit_depth': mode['bit_depth']
+            'output_size': sensor_mode['size'],
+            'bit_depth': sensor_mode['bit_depth']
         }
     )
     picam2.configure(config)
 
-def configure_preview(picam2):
+def configure_preview():
     print('Starting preview window')
     picam2.start_preview(
         Preview.QTGL, 
@@ -116,11 +122,11 @@ def parse_save_file(saveDir):
     saveFile = saveDirectory + '/' + now
     return saveFile
 
-def start_recording(picam2, bitrate, fps, saveFile):
+def start_recording(bitrate, saveFile):
     print('Setting up H264 encoder')
     encoder = H264Encoder(
         bitrate=bitrate,
-        framerate=fps
+        framerate=sensor_mode['fps']
     )
     output = FfmpegOutput(
         output_filename=saveFile+'.mp4',
