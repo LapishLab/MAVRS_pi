@@ -20,7 +20,8 @@ def main():
     experiment_options = parse_arguments()
     hardware_settings = load_hardware_settings()
     (picam2, sensor_mode) = configure_camera(hardware_settings['camera'])
-    configure_preview(picam2, hardware_settings['display'])
+    if hardware_settings['display']['enable']:
+        configure_preview(picam2, hardware_settings['display'])
     if not experiment_options.noSave:
         saveFile = parse_save_file(experiment_options.saveDir)
         start_recording(picam2, hardware_settings['camera']['bitrate'], saveFile)
@@ -88,20 +89,16 @@ def configure_preview(picam2, display_settings):
     print('Starting preview window')
     picam2.start_preview(
         Preview.QTGL, 
-        width=800, 
-        height=480, 
+        width=display_settings['size_x'], 
+        height=display_settings['size_y'], 
         x=0, 
         y=0,
         transform=Transform(
-            hflip=1,
-            vflip=1
+            hflip=display_settings['horizontal_flip'],
+            vflip=display_settings['vertical_flip']
         )
     )
-    picam2.title_fields = [
-        "ExposureTime",
-        "FrameDuration",
-        "Lux"
-        ]
+    picam2.title_fields = display_settings['title_fields']
 
 def parse_save_file(saveDir):
     scriptPath = os.path.dirname(__file__)
