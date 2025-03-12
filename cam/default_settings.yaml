@@ -1,0 +1,14 @@
+---
+camera:
+  sensor_mode: 1
+  bitrate : 10000000
+
+display:
+  enable: True
+  size_x: 800
+  size_y: 480
+  horizontal_flip: True
+  vertical_flip: False
+  title_fields: ["ExposureTime", "FrameDuration", "Lux"]
+
+ 

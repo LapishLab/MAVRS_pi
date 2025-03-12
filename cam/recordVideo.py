@@ -10,32 +10,34 @@ from picamera2.encoders import H264Encoder
 from picamera2.outputs import FfmpegOutput
 from picamera2 import Preview
 from libcamera import Transform
-
-picam2 = None
-sensor_mode = None
+import yaml
 
 def main():
-    args = parse_arguments()
-    system_config(args)
-    configure_camera()
-    configure_preview()
-    if not args.noSave:
-        saveFile = parse_save_file(args.saveDir)
-        start_recording(args.bitrate, saveFile)
+    #Turn off Info and warning logging
+    Picamera2.set_logging(Picamera2.ERROR)
+    os.environ["LIBCAMERA_LOG_LEVELS"]="3"
+
+    experiment_options = parse_arguments()
+    hardware_settings = load_hardware_settings()
+    (picam2, sensor_mode) = configure_camera(hardware_settings['camera'])
+    configure_preview(picam2, hardware_settings['display'])
+    if not experiment_options.noSave:
+        saveFile = parse_save_file(experiment_options.saveDir)
+        start_recording(picam2, hardware_settings['camera']['bitrate'], saveFile)
     picam2.start()
 
     #Record for specified duration
     def endRecording(sig, frame):
         picam2.stop()
-        if not args.noSave:
+        if not experiment_options.noSave:
             picam2.stop_encoder()
         print('recordVideo.py finished')
         exit(0)
 
     signal.signal(signal.SIGINT, endRecording)
     signal.signal(signal.SIGTERM, endRecording)
-    print('waiting for a duration of '+str(args.duration) + ' seconds')
-    sleep(args.duration)
+    print('waiting for a duration of '+str(experiment_options.duration) + ' seconds')
+    sleep(experiment_options.duration)
     endRecording(0,None)
 
 def parse_arguments():
@@ -44,41 +46,33 @@ def parse_arguments():
     parser.add_argument('--duration', 
                         type=int, 
                         help='Recording duration in seconds (default=86400s)',
-                        default='86400')
+                        default='30')
     parser.add_argument('--noSave', 
                         action='store_true',
                         help='No file is saved. Screen still displays the video')
     parser.add_argument('--saveDir', 
                         help='Path within the Data folder to which data will be saved'
                         )
-    parser.add_argument('--sensorMode', 
-                        help='Mode number of the camera sensor',
-                        type=int,
-                        default='0'
-                        )
-    parser.add_argument('--bitrate', 
-                        help='Bitrate of video (compression level)',
-                        type=int,
-                        default='10000000'
-                        )
     return parser.parse_args()
 
-def system_config(args):
-    os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
-    #os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
-    os.environ["DISPLAY"] = ':0' 
+def load_hardware_settings():
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    default_yaml = script_dir + "/default_settings.yaml"
+    with open(default_yaml, 'r') as f:
+            default_settings = yaml.full_load(f)
+    return default_settings
 
-    #Turn off Info and warning logging
-    Picamera2.set_logging(Picamera2.ERROR)
-    os.environ["LIBCAMERA_LOG_LEVELS"]="3"
+def configure_camera(camera_settings):
+    if camera_settings['sensor_mode'] == 0:
+        os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
+        sensor_ind = 0
+    else:
+        os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
+        sensor_ind = camera_settings['sensor_mode']-1
 
-    global picam2
     picam2 = Picamera2()
-    global sensor_mode
-    sensor_mode = picam2.sensor_modes[args.sensorMode]
 
-def configure_camera():
-    print('configuring camera')
+    sensor_mode = picam2.sensor_modes[sensor_ind]
     config = picam2.create_video_configuration(
         sensor={
             'output_size': sensor_mode['size'],
@@ -86,8 +80,11 @@ def configure_camera():
         }
     )
     picam2.configure(config)
+    return (picam2, sensor_mode)
 
-def configure_preview():
+def configure_preview(picam2, display_settings):
+    os.environ["DISPLAY"] = ':0' 
+
     print('Starting preview window')
     picam2.start_preview(
         Preview.QTGL, 
@@ -122,11 +119,11 @@ def parse_save_file(saveDir):
     saveFile = saveDirectory + '/' + now
     return saveFile
 
-def start_recording(bitrate, saveFile):
+def start_recording(picam2, bitrate, saveFile):
     print('Setting up H264 encoder')
     encoder = H264Encoder(
-        bitrate=bitrate,
-        framerate=sensor_mode['fps']
+        bitrate=bitrate#,
+        #framerate=sensor_mode['fps']
     )
     output = FfmpegOutput(
         output_filename=saveFile+'.mp4',
