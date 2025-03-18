@@ -14,7 +14,7 @@ import yaml
 
 def main():
     #Turn off Info and warning logging
-    Picamera2.set_logging(Picamera2.ERROR)
+    Picamera2.set_logging(Picamera2.WARNING)
     os.environ["LIBCAMERA_LOG_LEVELS"]="3"
 
     experiment_options = parse_arguments()
@@ -81,14 +81,21 @@ def configure_camera(camera_settings):
         os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
 
     picam2 = Picamera2() #Need to turn ON/OFF HDR before instantiating picam2
-
     sensor_mode = picam2.sensor_modes[sensor_mode_index]
+    
+    max_H264_res = (1920,1080)
+    if sensor_mode['size'][0] > max_H264_res[0]:
+        main_size = max_H264_res
+    else:
+        main_size = sensor_mode['size']
     config = picam2.create_video_configuration(
         sensor={
             'output_size': sensor_mode['size'],
             'bit_depth': sensor_mode['bit_depth']
-        }
+        },
+        main={'size': main_size}
     )
+    picam2.align_configuration(config) #set optimal image size for main stream
     picam2.configure(config)
     return (picam2, sensor_mode)
 
