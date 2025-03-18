@@ -64,16 +64,25 @@ def load_hardware_settings():
     return default_settings
 
 def configure_camera(camera_settings):
-    if camera_settings['sensor_mode'] == 0:
+    match camera_settings['sensor_mode']: 
+        case 'low_res':
+            sensor_mode_index = 0
+        case 'medium_res':
+            sensor_mode_index = 1
+        case 'high_res':
+            sensor_mode_index = 2
+        case _: # Default to HDR
+            camera_settings['sensor_mode'] = 'HDR'
+            sensor_mode_index = 0
+
+    if camera_settings['sensor_mode'] == "HDR": #Need to turn ON/OFF HDR before instantiating picam2
         os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
-        sensor_ind = 0
     else:
         os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
-        sensor_ind = camera_settings['sensor_mode']-1
 
-    picam2 = Picamera2()
+    picam2 = Picamera2() #Need to turn ON/OFF HDR before instantiating picam2
 
-    sensor_mode = picam2.sensor_modes[sensor_ind]
+    sensor_mode = picam2.sensor_modes[sensor_mode_index]
     config = picam2.create_video_configuration(
         sensor={
             'output_size': sensor_mode['size'],

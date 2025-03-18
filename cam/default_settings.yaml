@@ -1,6 +1,6 @@
 ---
 camera:
-  sensor_mode: 1
+  sensor_mode: hdr # options: [HDR, high_res, medium_res, low_res]
   bitrate : 10000000
 
 display:
