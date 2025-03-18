@@ -49,7 +49,7 @@ def parse_arguments():
     parser.add_argument('--duration', 
                         type=int, 
                         help='Recording duration in seconds (default=86400s)',
-                        default='30')
+                        default='86400s')
     parser.add_argument('--saveDir', 
                         help='Path within the Data folder to which data will be saved'
                         )
