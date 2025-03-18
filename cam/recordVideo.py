@@ -6,7 +6,7 @@ from time import sleep
 from argparse import ArgumentParser
 from datetime import datetime
 from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder
+from picamera2.encoders import Quality
 from picamera2.outputs import FfmpegOutput
 from picamera2 import Preview
 from libcamera import Transform
@@ -19,19 +19,21 @@ def main():
 
     experiment_options = parse_arguments()
     hardware_settings = load_hardware_settings()
-    (picam2, sensor_mode) = configure_camera(hardware_settings['camera'])
-    if hardware_settings['display']['enable']:
-        configure_preview(picam2, hardware_settings['display'])
-    if not experiment_options.noSave:
-        saveFile = parse_save_file(experiment_options.saveDir)
-        start_recording(picam2, hardware_settings['camera']['bitrate'], saveFile)
-    picam2.start()
+    picam2 = configure_camera(hardware_settings['camera'])
+    start_preview(picam2, hardware_settings['display'])
+    save_name = parse_save_file(experiment_options.saveDir)
+    output = FfmpegOutput(
+        output_filename= save_name+'.mp4',
+        pts = save_name+'.pts'
+        )
+    picam2.start_and_record_video(
+        output = output,
+        quality = Quality[hardware_settings['camera']['quality']]
+        )
 
     #Record for specified duration
     def endRecording(sig, frame):
-        picam2.stop()
-        if not experiment_options.noSave:
-            picam2.stop_encoder()
+        picam2.stop_recording()
         print('recordVideo.py finished')
         exit(0)
 
@@ -48,9 +50,6 @@ def parse_arguments():
                         type=int, 
                         help='Recording duration in seconds (default=86400s)',
                         default='30')
-    parser.add_argument('--noSave', 
-                        action='store_true',
-                        help='No file is saved. Screen still displays the video')
     parser.add_argument('--saveDir', 
                         help='Path within the Data folder to which data will be saved'
                         )
@@ -97,24 +96,24 @@ def configure_camera(camera_settings):
     )
     picam2.align_configuration(config) #set optimal image size for main stream
     picam2.configure(config)
-    return (picam2, sensor_mode)
+    return picam2
 
-def configure_preview(picam2, display_settings):
-    os.environ["DISPLAY"] = ':0' 
-
-    print('Starting preview window')
-    picam2.start_preview(
-        Preview.QTGL, 
-        width=display_settings['size_x'], 
-        height=display_settings['size_y'], 
-        x=0, 
-        y=0,
-        transform=Transform(
-            hflip=display_settings['horizontal_flip'],
-            vflip=display_settings['vertical_flip']
+def start_preview(picam2, display_settings):
+    if display_settings['enable']:
+        print('Starting preview window')
+        os.environ["DISPLAY"] = ':0' 
+        picam2.start_preview(
+            Preview.QTGL, 
+            width=display_settings['size_x'], 
+            height=display_settings['size_y'], 
+            x=0, 
+            y=0,
+            transform=Transform(
+                hflip=display_settings['horizontal_flip'],
+                vflip=display_settings['vertical_flip']
+            )
         )
-    )
-    picam2.title_fields = display_settings['title_fields']
+        picam2.title_fields = display_settings['title_fields']
 
 def parse_save_file(saveDir):
     scriptPath = os.path.dirname(__file__)
@@ -131,29 +130,6 @@ def parse_save_file(saveDir):
     now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     saveFile = saveDirectory + '/' + now
     return saveFile
-
-def start_recording(picam2, bitrate, saveFile):
-    print('Setting up H264 encoder')
-    encoder = H264Encoder(
-        bitrate=bitrate#,
-        #framerate=sensor_mode['fps']
-    )
-    output = FfmpegOutput(
-        output_filename=saveFile+'.mp4',
-        pts=saveFile+'.pts'
-    )
-    picam2.start_encoder(
-        encoder=encoder,
-        output=output
-    )
-
-
-
-
-
-
-
-
 
 if __name__ == "__main__":
     main()
