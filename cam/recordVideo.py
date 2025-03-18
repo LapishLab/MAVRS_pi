@@ -12,6 +12,8 @@ from picamera2 import Preview
 from libcamera import Transform
 import yaml
 
+picam2 = None # set in configure_camera()
+
 def main():
     #Turn off Info and warning logging
     Picamera2.set_logging(Picamera2.WARNING)
@@ -19,8 +21,8 @@ def main():
 
     experiment_options = parse_arguments()
     hardware_settings = load_hardware_settings()
-    picam2 = configure_camera(hardware_settings['camera'])
-    start_preview(picam2, hardware_settings['display'])
+    configure_camera(hardware_settings['camera'])
+    start_preview(hardware_settings['display'])
     save_name = parse_save_file(experiment_options.saveDir)
     output = FfmpegOutput(
         output_filename= save_name+'.mp4',
@@ -31,17 +33,19 @@ def main():
         quality = Quality[hardware_settings['camera']['quality']]
         )
 
-    #Record for specified duration
-    def endRecording(sig, frame):
-        picam2.stop_recording()
-        print('recordVideo.py finished')
-        exit(0)
-
+    #register Interups
     signal.signal(signal.SIGINT, endRecording)
     signal.signal(signal.SIGTERM, endRecording)
+
+    #Wait for specified duration
     print('waiting for a duration of '+str(experiment_options.duration) + ' seconds')
-    sleep(experiment_options.duration)
+    sleep(experiment_options.duration) 
     endRecording(0,None)
+
+def endRecording(sig, frame):
+    picam2.stop_recording()
+    print('recordVideo.py finished')
+    exit(0)
 
 def parse_arguments():
     #Parse recording settings
@@ -79,6 +83,7 @@ def configure_camera(camera_settings):
     else:
         os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
 
+    global picam2
     picam2 = Picamera2() #Need to turn ON/OFF HDR before instantiating picam2
     sensor_mode = picam2.sensor_modes[sensor_mode_index]
     
@@ -96,9 +101,8 @@ def configure_camera(camera_settings):
     )
     picam2.align_configuration(config) #set optimal image size for main stream
     picam2.configure(config)
-    return picam2
 
-def start_preview(picam2, display_settings):
+def start_preview(display_settings):
     if display_settings['enable']:
         print('Starting preview window')
         os.environ["DISPLAY"] = ':0' 
