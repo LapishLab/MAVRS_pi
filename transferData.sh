@@ -4,4 +4,4 @@
 cd $(dirname "$(readlink -f "$0")")
 path=$1@10.1.1.0:$2
 echo "Started data transfer to ""$path"" at ""$(date +%H:%M:%S)"" "
-rsync --recursive  --compress --progress --exclude=".*"  data/ "$path"
+rsync --archive --progress --exclude=".*"  data/ "$path"
