@@ -89,7 +89,7 @@ def configure_camera(camera_settings):
     
     max_H264_res = (1920,1080)
     if sensor_mode['size'][0] > max_H264_res[0]:
-        main_size = max_H264_res
+        main_size = (1280,720)
     else:
         main_size = sensor_mode['size']
     config = picam2.create_video_configuration(

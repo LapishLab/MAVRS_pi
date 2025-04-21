@@ -1,7 +1,7 @@
 ---
 camera:
   sensor_mode: HDR # options: [HDR, high_res, medium_res, low_res]
-  quality : HIGH #VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW
+  quality : MEDIUM  #VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW
 
 display:
   enable: True
