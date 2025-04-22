@@ -19,6 +19,6 @@ if args.session is None:
 
 saveDirectory = args.session + '/' + hostname
 
-Popen(['python', '-u', scriptPath+'/pins/recordInput.py', '--saveDir', saveDirectory])
-Popen(['python', '-u', scriptPath+'/mic/recordAudio.py', '--saveDir', saveDirectory])
-Popen(['python', '-u', scriptPath+'/cam/recordVideo.py', '--saveDir', saveDirectory])
+Popen(['python', '-u', scriptPath+'/pins/recordInput.py', '--saveDir', saveDirectory + '/gpio'])
+Popen(['python', '-u', scriptPath+'/mic/recordAudio.py', '--saveDir', saveDirectory + '/mic'])
+Popen(['python', '-u', scriptPath+'/cam/recordVideo.py', '--saveDir', saveDirectory + '/cam'])
