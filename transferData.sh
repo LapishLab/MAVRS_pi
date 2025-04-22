@@ -5,3 +5,4 @@ cd $(dirname "$(readlink -f "$0")")
 path=$1@10.1.1.0:$2
 echo "Started data transfer to ""$path"" at ""$(date +%H:%M:%S)"" "
 rsync --archive --progress --exclude=".*"  data/ "$path"
+echo "Transfer completed. It should be safe to delete data from this Pi"
