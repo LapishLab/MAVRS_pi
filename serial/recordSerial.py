@@ -18,7 +18,9 @@ def main(saveDir):
 
     start_time = time.time() # more performant than datetime.now()
     timeString = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    data_file = join(saveDir, f'{timeString}.txt')
+
+    root = dirname(dirname(__file__))
+    data_file = join(root,'data' , saveDir, 'serial', f'{timeString}.txt')
     makedirs(dirname(data_file), exist_ok=True)
     print(f"Logging data to {data_file}...")
     with open(data_file, 'w', encoding='utf-8') as f:
