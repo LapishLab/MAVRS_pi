@@ -2,7 +2,8 @@
 binary representation (each byte as an 8-bit string).
 """
 
-from os.path import join
+from os.path import join, dirname
+from os import makedirs
 from datetime import datetime
 import serial
 import time
@@ -18,6 +19,7 @@ def main(saveDir):
     start_time = time.time() # more performant than datetime.now()
     timeString = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     data_file = join(saveDir, f'{timeString}.txt')
+    makedirs(dirname(data_file), exist_ok=True)
     print(f"Logging data to {data_file}...")
     with open(data_file, 'w', encoding='utf-8') as f:
         while True:
