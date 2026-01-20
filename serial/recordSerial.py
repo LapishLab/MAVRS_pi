@@ -20,7 +20,7 @@ def main(saveDir):
     timeString = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
 
     root = dirname(dirname(__file__))
-    data_file = join(root,'data' , saveDir, 'serial', f'{timeString}.txt')
+    data_file = join(root,'data' , saveDir, f'{timeString}.txt')
     makedirs(dirname(data_file), exist_ok=True)
     print(f"Logging data to {data_file}...")
     with open(data_file, 'w', encoding='utf-8') as f:
