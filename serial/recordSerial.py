@@ -24,6 +24,7 @@ def main(saveDir):
     makedirs(dirname(data_file), exist_ok=True)
     print(f"Logging data to {data_file}...")
     with open(data_file, 'w', encoding='utf-8') as f:
+        f.write(f"time,capacitance\n")
         while True:
             line = ser.readline().decode('utf-8').strip()
             elapsed_time = time.time() - start_time
