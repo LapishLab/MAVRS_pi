@@ -119,5 +119,21 @@ def start_preview(display_settings):
         )
         picam2.title_fields = display_settings['title_fields']
 
+def parse_save_file(saveDir):
+    scriptPath = os.path.dirname(__file__)
+    dataDir = os.path.dirname(scriptPath) + '/data/'
+    if saveDir is None:
+        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        hostname = os.uname().nodename
+        saveDir= now + '/' + hostname
+    saveDirectory=dataDir + saveDir
+
+    if not os.path.exists(saveDirectory):
+        os.makedirs(saveDirectory)
+
+    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    saveFile = saveDirectory + '/' + now
+    return saveFile
+
 if __name__ == "__main__":
     main()
