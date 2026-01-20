@@ -22,3 +22,4 @@ saveDirectory = args.session + '/' + hostname
 Popen(['python', '-u', scriptPath+'/pins/recordInput.py', '--saveDir', saveDirectory + '/gpio'])
 Popen(['python', '-u', scriptPath+'/mic/recordAudio.py', '--saveDir', saveDirectory + '/mic'])
 Popen(['python', '-u', scriptPath+'/cam/recordVideo.py', '--saveDir', saveDirectory + '/cam'])
+Popen(['python', '-u', scriptPath+'/serial/recordSerial.py', '--saveDir', saveDirectory + '/serial'])

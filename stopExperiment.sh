@@ -10,3 +10,6 @@ bash pins/stopInput.sh
 
 echo "stopping video"
 bash cam/stopVideo.sh
+
+echo "stopping Serial"
+bash serial/stopSerial.sh
