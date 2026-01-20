@@ -9,12 +9,12 @@ import serial
 import time
 from serial.tools import list_ports
 
-port = 'COM15'
+# port = 'COM15'
 # rate = 115200
 rate = 250000 # gotta go fast
 
 def main(saveDir):    
-    ser = open_serial_port(port, rate)
+    ser = open_serial_port(rate)
 
     start_time = time.time() # more performant than datetime.now()
     timeString = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -27,15 +27,15 @@ def main(saveDir):
             elapsed_time = time.time() - start_time
             f.write(f"{elapsed_time:.4f},{line}\n")
 
-def open_serial_port(port, rate):
+def open_serial_port(rate):
     while True:
         try:
+            port = find_open_port()
             ser = serial.Serial(port, rate, timeout=None)
             return ser
         except Exception as e:
             print(f"Failed to open serial port {port}: {e}")
             print(f"retrying in 5 seconds...")
-            list_com_ports()
             time.sleep(5)
 
 
@@ -50,6 +50,16 @@ def list_com_ports():
         # p.device is the device name (e.g., COM3)
         # p.description gives a human-readable description
         print(f"- {p.device}: {p.description}")
+
+def find_open_port():
+    while True:
+        ports = list_ports.comports()
+        if ports:
+            return ports[0].device
+        else:
+            print("No serial/com ports found. Trying again in 5 seconds")
+            time.sleep(5)
+            
 
 if __name__ == "__main__":
     #Parse recording settings
