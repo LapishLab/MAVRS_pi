@@ -1,12 +1,13 @@
 #! /bin/python
 import signal, os
+from pathlib import Path
 from sys import exit
-#from warnings import warn
 from time import sleep
 from argparse import ArgumentParser
 from gpiozero import Button 
 from datetime import datetime
 from csv import DictWriter
+from config import default_data_path
 
 #Parse recording settings
 parser = ArgumentParser(description='Record GPIO pin 16')
@@ -22,20 +23,15 @@ args = parser.parse_args()
 pins = [16]  # List of GPIO pins to monitor 
 csvFields = ['Time', 'Pin', 'Event']
 
-scriptPath = os.path.dirname(__file__)
-dataDir = os.path.dirname(scriptPath) + '/data/'
 if args.saveDir is None:
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
-        hostname = os.uname().nodename
-        args.saveDir= now + '/' + hostname
-saveDirectory=dataDir + args.saveDir
-
-if not os.path.exists(saveDirectory):
-    os.makedirs(saveDirectory)
+    saveDir = default_data_path() / 'gpio'
+else:
+    saveDir = Path(args.saveDir)
+saveDir.mkdir(parents=True, exist_ok=True)
 
 now = datetime.now().strftime("%Y%m%d_%H%M%S")
-saveFile = saveDirectory + '/' + now + '.csv'
-print('SavingFile as '+saveFile)
+saveFile = saveDir / (now + '.csv')
+print('SavingFile as ' + str(saveFile))
 
 # Create or open the CSV file and write the header 
 with open(saveFile, "w", newline='') as csvfile: 

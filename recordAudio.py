@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 import os
-#from warnings import warn
+from pathlib import Path
 from argparse import ArgumentParser
-from datetime import datetime
+from config import default_data_path
 
 #Parse recording settings
 parser = ArgumentParser(description='Record audio.')
@@ -21,25 +21,19 @@ parser.add_argument('--heterodyne', '-z',
 
 args = parser.parse_args()
 
-scriptPath = os.path.dirname(__file__)
-dataDir = os.path.dirname(scriptPath) + '/data/'
 if args.saveDir is None:
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
-        hostname = os.uname().nodename
-        args.saveDir= now + '/' + hostname
-saveDirectory=dataDir + args.saveDir
-
-
-if not os.path.exists(saveDirectory):
-    os.makedirs(saveDirectory)
-print('SavingFile in '+saveDirectory)
+    saveDir = default_data_path() / 'mic'
+else:
+    saveDir = Path(args.saveDir)
+saveDir.mkdir(parents=True, exist_ok=True)
+print('SavingFile in ' + str(saveDir))
 
 c= 'AudioMoth-Live ' + args.sampleRate
-c=c + ' autosave ' + args.autoSaveInterval + ' ' + saveDirectory
+c=c + ' autosave ' + args.autoSaveInterval + ' ' + str(saveDir)
 
 if args.heterodyne is not None:
     c=c + ' heterodyne ' + args.heterodyne
-    warn('Heterodyne might cause sporadic camera disconnect problems')
+    print('Heterodyne might cause sporadic camera disconnect problems')
     
 
 print('starting audio recording')

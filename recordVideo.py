@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import signal, os
+from pathlib import Path
 from sys import exit
-#from warnings import warn
 from time import sleep
 from argparse import ArgumentParser
 from datetime import datetime
@@ -11,6 +11,7 @@ from picamera2.outputs import FfmpegOutput
 from picamera2 import Preview
 from libcamera import Transform
 import yaml
+from config import default_data_path, CONFIG_YAML
 
 picam2 = None # set in configure_camera()
 
@@ -23,10 +24,12 @@ def main():
     hardware_settings = load_hardware_settings()
     configure_camera(hardware_settings['camera'])
     start_preview(hardware_settings['display'])
-    save_name = parse_save_file(experiment_options.saveDir)
+
+    # Set up save file
+    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     output = FfmpegOutput(
-        output_filename= save_name+'.mp4',
-        pts = save_name+'.pts'
+        output_filename= str(experiment_options.saveDir / f'{now}.mp4'),
+        pts = str(experiment_options.saveDir/f'{now}.pts')
         )
     picam2.start_and_record_video(
         output = output,
@@ -57,12 +60,17 @@ def parse_arguments():
     parser.add_argument('--saveDir', 
                         help='Path within the Data folder to which data will be saved'
                         )
-    return parser.parse_args()
+
+    args =parser.parse_args()
+    if args.saveDir is None:
+        args.saveDir = default_data_path() / 'cam'
+    else:
+        args.saveDir = Path(args.saveDir)
+    args.saveDir.mkdir(parents=True, exist_ok=True)
+    return args
 
 def load_hardware_settings():
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-    default_yaml = script_dir + "/default_settings.yaml"
-    with open(default_yaml, 'r') as f:
+    with open(CONFIG_YAML, 'r') as f:
             default_settings = yaml.full_load(f)
     return default_settings
 
@@ -118,22 +126,6 @@ def start_preview(display_settings):
             )
         )
         picam2.title_fields = display_settings['title_fields']
-
-def parse_save_file(saveDir):
-    scriptPath = os.path.dirname(__file__)
-    dataDir = os.path.dirname(scriptPath) + '/data/'
-    if saveDir is None:
-        now = datetime.now().strftime("%Y%m%d_%H%M%S")
-        hostname = os.uname().nodename
-        saveDir= now + '/' + hostname
-    saveDirectory=dataDir + saveDir
-
-    if not os.path.exists(saveDirectory):
-        os.makedirs(saveDirectory)
-
-    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    saveFile = saveDirectory + '/' + now
-    return saveFile
 
 if __name__ == "__main__":
     main()
