@@ -1,31 +1,39 @@
 #!/usr/bin/python3
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from subprocess import Popen
+from typing import Optional
 from config import DATA_DIR, ROOT_DIR, HOSTNAME
 
-parser = ArgumentParser(description='start an experiment')
-parser.add_argument('--session', 
-                    help='SessionName'
-                    )
-args = parser.parse_args()
+def script_args() -> dict:
+    parser = ArgumentParser(description='start an experiment')
+    parser.add_argument('--session', type=str,
+		help='SessionName (default current date and time in YYYYMMDD_HHMMSS format)')
+    args = parser.parse_args()
+    # Filter out None values and return dict
+    return {k: v for k, v in vars(args).items() if v is not None}
 
-if args.session is None:
-        args.session = datetime.now().strftime("%Y%m%d_%H%M%S")
+def main(session: Optional[str] = None) -> None:
+    if session is None:
+        session = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-saveRoot = DATA_DIR / args.session / HOSTNAME
+    saveRoot = DATA_DIR / session / HOSTNAME
 
-# Start GPIO recording
-scriptPath = ROOT_DIR /'recordInput.py'
-saveDir = saveRoot / 'gpio'
-Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+    # Start GPIO recording
+    scriptPath = ROOT_DIR / 'recordInput.py'
+    saveDir = saveRoot / 'gpio'
+    Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
 
-# Start audio recording
-scriptPath = ROOT_DIR / 'recordAudio.py'
-saveDir = saveRoot / 'mic'
-Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+    # Start audio recording
+    scriptPath = ROOT_DIR / 'recordAudio.py'
+    saveDir = saveRoot / 'mic'
+    Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
 
-# Start video recording
-scriptPath = ROOT_DIR / 'recordVideo.py'
-saveDir = saveRoot / 'cam'
-Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+    # Start video recording
+    scriptPath = ROOT_DIR / 'recordVideo.py'
+    saveDir = saveRoot / 'cam'
+    Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+
+if __name__ == '__main__':
+    args = script_args()
+    main(**args)
