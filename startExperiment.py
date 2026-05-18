@@ -17,21 +17,18 @@ def main(session: Optional[str] = None) -> None:
     if session is None:
         session = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    saveRoot = DATA_DIR / session / HOSTNAME
+    saveDir = DATA_DIR / session / HOSTNAME
 
     # Start GPIO recording
     scriptPath = ROOT_DIR / 'recordInput.py'
-    saveDir = saveRoot / 'gpio'
     Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
 
     # Start audio recording
     scriptPath = ROOT_DIR / 'recordAudio.py'
-    saveDir = saveRoot / 'mic'
     Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
 
     # Start video recording
     scriptPath = ROOT_DIR / 'recordVideo.py'
-    saveDir = saveRoot / 'cam'
     Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
 
 if __name__ == '__main__':

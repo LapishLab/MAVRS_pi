@@ -27,9 +27,10 @@ def script_args():
 
 def main(save_dir: str = None):
     if save_dir is None:
-        save_dir = default_data_path() / 'cam'
+        save_dir = default_data_path()
     else:
         save_dir = Path(save_dir)
+    save_dir = save_dir /  'cam'
     save_dir.mkdir(parents=True, exist_ok=True)
 
     #Turn off Info and warning logging

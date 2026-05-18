@@ -22,9 +22,10 @@ def script_args() -> dict:
 
 def main(save_dir: str = None, sample_rate: int = 250000, auto_save_interval: int = 5, heterodyne: int = None) -> None:
     if save_dir is None:
-        save_dir = default_data_path() / 'mic'
+        save_dir = default_data_path()
     else:
         save_dir = Path(save_dir)
+    save_dir = save_dir / 'mic'
     save_dir.mkdir(parents=True, exist_ok=True)
     print('SavingFile in ' + str(save_dir))
 

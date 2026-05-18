@@ -24,9 +24,10 @@ def main(save_dir: str = None) -> None:
     csvFields = ['Time', 'Pin', 'Event']
 
     if save_dir is None:
-        save_dir = default_data_path() / 'gpio'
+        save_dir = default_data_path()
     else:
         save_dir = Path(save_dir)
+    save_dir = save_dir / 'gpio'
     save_dir.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
