@@ -1,8 +1,10 @@
-import os
 from pathlib import Path
 from argparse import ArgumentParser
 from typing import Optional
 from config import default_data_path
+import signal
+import time
+from subprocess import Popen
 
 def script_args() -> dict:
     parser = ArgumentParser(description='Record audio.')
@@ -26,16 +28,31 @@ def main(save_dir: str = None, sample_rate: int = 250000, auto_save_interval: in
     save_dir.mkdir(parents=True, exist_ok=True)
     print('SavingFile in ' + str(save_dir))
 
-    c = 'AudioMoth-Live ' + sample_rate
-    c = c + ' autosave ' + auto_save_interval + ' ' + str(save_dir)
+    c = ['AudioMoth-Live', str(sample_rate), 'autosave', str(auto_save_interval), str(save_dir)]
 
     if heterodyne is not None:
-        c = c + ' heterodyne ' + heterodyne
+        c.append('heterodyne')
+        c.append(str(heterodyne))
         print('Heterodyne might cause sporadic camera disconnect problems')
 
     print('starting audio recording')
-    os.system(c)
-    print('recordAudio.sh finished')
+    p = Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+
+    def handle_sigterm(signum, frame):
+        print("\nEnding Audio recording")
+        if p.is_alive():
+            p.terminate()
+        sys.exit(0)
+
+	# Register the SIGTERM handler
+	signal.signal(signal.SIGTERM, handle_sigterm)
+	signal.signal(signal.SIGINT, handle_sigterm)  # SIGINT is for handling Ctrl+C gracefully
+
+	try:
+		while True:
+			time.sleep(1)
+	except KeyboardInterrupt:
+		handle_sigterm(None, None)
 
 
 if __name__ == '__main__':
