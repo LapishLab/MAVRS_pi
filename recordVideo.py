@@ -40,10 +40,11 @@ def main():
     signal.signal(signal.SIGINT, endRecording)
     signal.signal(signal.SIGTERM, endRecording)
 
-    #Wait for specified duration
-    print('waiting for a duration of '+str(experiment_options.duration) + ' seconds')
-    sleep(experiment_options.duration) 
-    endRecording(0,None)
+    #Wait until interrupt
+    try:
+		while True: time.sleep(1)
+	except KeyboardInterrupt:
+		endRecording(0,None)
 
 def endRecording(sig, frame):
     picam2.stop_recording()
@@ -53,10 +54,6 @@ def endRecording(sig, frame):
 def parse_arguments():
     #Parse recording settings
     parser = ArgumentParser(description='Display and record video.')
-    parser.add_argument('--duration', 
-                        type=int, 
-                        help='Recording duration in seconds (default=86400s)',
-                        default='86400')
     parser.add_argument('--saveDir', 
                         help='Path within the Data folder to which data will be saved'
                         )

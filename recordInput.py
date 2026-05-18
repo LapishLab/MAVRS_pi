@@ -14,14 +14,12 @@ def script_args() -> dict:
     parser = ArgumentParser(description='Record GPIO pin 16')
     parser.add_argument('--saveDir', type=str, 
         help='Path within the Data folder to which data will be saved')
-    parser.add_argument('--duration', type=int, 
-        help='Recording duration in seconds (default=86400s)')
     args = parser.parse_args()
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
 
-def main(save_dir: str = None, duration: int = 86400) -> None:
+def main(save_dir: str = None) -> None:
     pins = [16]  # List of GPIO pins to monitor 
     csvFields = ['Time', 'Pin', 'Event']
 
@@ -59,9 +57,11 @@ def main(save_dir: str = None, duration: int = 86400) -> None:
     signal.signal(signal.SIGINT, endRecording)
     signal.signal(signal.SIGTERM, endRecording)
 
-    print('waiting for a duration of ' + str(duration) + ' seconds')
-    sleep(duration)
-    endRecording(0, None)
+    #Wait until interrupt
+    try:
+		while True: time.sleep(1)
+	except KeyboardInterrupt:
+		endRecording(0,None)
 
 
 if __name__ == '__main__':
