@@ -1,9 +1,12 @@
 #!/usr/bin/python3
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
-from subprocess import Popen
 from typing import Optional
 from config import DATA_DIR, ROOT_DIR, HOSTNAME
+from multiprocessing import Process
+import recordAudio
+import recordVideo
+import recordInput
 
 def script_args() -> dict:
     parser = ArgumentParser(description='start an experiment')
@@ -19,17 +22,32 @@ def main(session: Optional[str] = None) -> None:
 
     saveDir = DATA_DIR / session / HOSTNAME
 
-    # Start GPIO recording
-    scriptPath = ROOT_DIR / 'recordInput.py'
-    Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+	# Make a list of processes for each recording
+	procs = []
+	procs.append(Process(target=recordInput.main, kwargs=('save_dir':saveDir)))
+	procs.append(Process(target=recordAudio.main, kwargs=('save_dir':saveDir)))
+	procs.append(Process(target=recordVideo.main, kwargs=('save_dir':saveDir)))
+	for p in procs:
+		p.start()
 
-    # Start audio recording
-    scriptPath = ROOT_DIR / 'recordAudio.py'
-    Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+	def handle_sigterm(signum, frame):
+		print("\nCleaning up processes...")
+		for p in procs:
+			if p.is_alive():
+				p.terminate()
+		for p in procs:
+			p.join()
+		sys.exit(0)
 
-    # Start video recording
-    scriptPath = ROOT_DIR / 'recordVideo.py'
-    Popen(['python', '-u', str(scriptPath), '--saveDir', str(saveDir)])
+	# Register the SIGTERM handler
+	signal.signal(signal.SIGTERM, handle_sigterm)
+	signal.signal(signal.SIGINT, handle_sigterm)  # SIGINT is for handling Ctrl+C gracefully
+
+	try:
+		while True:
+			time.sleep(1)
+	except KeyboardInterrupt:
+		handle_sigterm(None, None)
 
 if __name__ == '__main__':
     args = script_args()
