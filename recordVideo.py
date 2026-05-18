@@ -15,12 +15,27 @@ from config import default_data_path, CONFIG_YAML
 
 picam2 = None # set in configure_camera()
 
-def main():
+
+def script_args():
+    #Parse recording settings
+    parser = ArgumentParser(description='Display and record video.')
+    parser.add_argument('--saveDir', type=str,
+        help='Path within the Data folder to which data will be saved')
+    args = parser.parse_args()
+    # Filter out None values and return dict
+    return {k: v for k, v in vars(args).items() if v is not None}
+
+def main(save_dir: str = None):
+    if save_dir is None:
+        save_dir = default_data_path() / 'cam'
+    else:
+        save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
+
     #Turn off Info and warning logging
     Picamera2.set_logging(Picamera2.WARNING)
     os.environ["LIBCAMERA_LOG_LEVELS"]="3"
 
-    experiment_options = parse_arguments()
     hardware_settings = load_hardware_settings()
     configure_camera(hardware_settings['camera'])
     start_preview(hardware_settings['display'])
@@ -28,8 +43,8 @@ def main():
     # Set up save file
     now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     output = FfmpegOutput(
-        output_filename= str(experiment_options.saveDir / f'{now}.mp4'),
-        pts = str(experiment_options.saveDir/f'{now}.pts')
+        output_filename= str(save_dir / f'{now}.mp4'),
+        pts = str(save_dir / f'{now}.pts')
         )
     picam2.start_and_record_video(
         output = output,
@@ -51,20 +66,6 @@ def endRecording(sig, frame):
     print('recordVideo.py finished')
     exit(0)
 
-def parse_arguments():
-    #Parse recording settings
-    parser = ArgumentParser(description='Display and record video.')
-    parser.add_argument('--saveDir', 
-                        help='Path within the Data folder to which data will be saved'
-                        )
-
-    args =parser.parse_args()
-    if args.saveDir is None:
-        args.saveDir = default_data_path() / 'cam'
-    else:
-        args.saveDir = Path(args.saveDir)
-    args.saveDir.mkdir(parents=True, exist_ok=True)
-    return args
 
 def load_hardware_settings():
     with open(CONFIG_YAML, 'r') as f:
@@ -125,4 +126,5 @@ def start_preview(display_settings):
         picam2.title_fields = display_settings['title_fields']
 
 if __name__ == "__main__":
-    main()
+    args = script_args()
+    main(**args)
