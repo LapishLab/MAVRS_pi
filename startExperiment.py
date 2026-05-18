@@ -7,16 +7,19 @@ import signal
 import time
 import sys
 
-
-def main():
+def script_args() -> dict:
 	parser = ArgumentParser(description='start an experiment')
 	parser.add_argument('--session', help='SessionName')
 	args = parser.parse_args()
+    # Filter out None values and return dict
+	return {k: v for k, v in vars(args).items() if v is not None} 
 
-	if args.session is None:
-		args.session = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-	saveDir = DATA_DIR / args.session / HOSTNAME
+def main(session=None):
+	if session is None:
+		session = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+	saveDir = DATA_DIR / session / HOSTNAME
 
 	print('starting experiment')
 
@@ -51,4 +54,5 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+	args = script_args()
+	main(**args)
