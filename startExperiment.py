@@ -1,32 +1,35 @@
 #!/usr/bin/python3
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 from datetime import datetime
 from typing import Optional
-from config import DATA_DIR, ROOT_DIR, HOSTNAME
+from config import DATA_DIR, HOSTNAME
 from multiprocessing import Process
 import recordAudio
 import recordVideo
 import recordInput
+import signal
+from time import sleep
+import sys
 
 def script_args() -> dict:
-    parser = ArgumentParser(description='start an experiment')
-    parser.add_argument('--session', type=str,
+	parser = ArgumentParser(description='start an experiment')
+	parser.add_argument('--session', type=str,
 		help='SessionName (default current date and time in YYYYMMDD_HHMMSS format)')
-    args = parser.parse_args()
-    # Filter out None values and return dict
-    return {k: v for k, v in vars(args).items() if v is not None}
+	args = parser.parse_args()
+	# Filter out None values and return dict
+	return {k: v for k, v in vars(args).items() if v is not None}
 
 def main(session: Optional[str] = None) -> None:
-    if session is None:
-        session = datetime.now().strftime("%Y%m%d_%H%M%S")
+	if session is None:
+		session = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    saveDir = DATA_DIR / session / HOSTNAME
+	saveDir = DATA_DIR / session / HOSTNAME
 
 	# Make a list of processes for each recording
 	procs = []
-	procs.append(Process(target=recordInput.main, kwargs=('save_dir':saveDir)))
-	procs.append(Process(target=recordAudio.main, kwargs=('save_dir':saveDir)))
-	procs.append(Process(target=recordVideo.main, kwargs=('save_dir':saveDir)))
+	procs.append(Process(target=recordInput.main, kwargs={'save_dir': saveDir}))
+	procs.append(Process(target=recordAudio.main, kwargs={'save_dir': saveDir}))
+	procs.append(Process(target=recordVideo.main, kwargs={'save_dir': saveDir}))
 	for p in procs:
 		p.start()
 
@@ -45,10 +48,10 @@ def main(session: Optional[str] = None) -> None:
 
 	try:
 		while True:
-			time.sleep(1)
+			sleep(1)
 	except KeyboardInterrupt:
 		handle_sigterm(None, None)
 
 if __name__ == '__main__':
-    args = script_args()
-    main(**args)
+	args = script_args()
+	main(**args)

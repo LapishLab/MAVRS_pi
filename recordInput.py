@@ -4,7 +4,6 @@ from pathlib import Path
 from sys import exit
 from time import sleep
 from argparse import ArgumentParser
-from typing import Optional
 from gpiozero import Button 
 from datetime import datetime
 from csv import DictWriter
@@ -60,9 +59,9 @@ def main(save_dir: str = None) -> None:
 
     #Wait until interrupt
     try:
-		while True: time.sleep(1)
-	except KeyboardInterrupt:
-		endRecording(0,None)
+        while True: sleep(1)
+    except KeyboardInterrupt:
+        endRecording(0,None)
 
 
 if __name__ == '__main__':

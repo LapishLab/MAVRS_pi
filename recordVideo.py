@@ -58,9 +58,9 @@ def main(save_dir: str = None):
 
     #Wait until interrupt
     try:
-		while True: time.sleep(1)
-	except KeyboardInterrupt:
-		endRecording(0,None)
+        while True: sleep(1)
+    except KeyboardInterrupt:
+        endRecording(0,None)
 
 def endRecording(sig, frame):
     picam2.stop_recording()
