@@ -8,7 +8,3 @@ dependencies = [
     "gpiozero>=2.0.1",
     "pyyaml>=6.0.3",
 ]
-
-
-[tool.uv]
-system-site-packages = true
