@@ -2,7 +2,7 @@
 import signal, os
 from pathlib import Path
 from sys import exit
-from time import sleep
+from typing import Optional
 from argparse import ArgumentParser
 from gpiozero import Button 
 from datetime import datetime
@@ -18,7 +18,7 @@ def script_args() -> dict:
     return {k: v for k, v in vars(args).items() if v is not None}
 
 
-def main(save_dir: str = None) -> None:
+def main(save_dir: Optional[str] = None) -> None:
     pins = [16]  # List of GPIO pins to monitor 
     csvFields = ['Time', 'Pin', 'Event']
 
@@ -58,10 +58,8 @@ def main(save_dir: str = None) -> None:
     signal.signal(signal.SIGTERM, endRecording)
 
     #Wait until interrupt
-    try:
-        while True: sleep(1)
-    except KeyboardInterrupt:
-        endRecording(0,None)
+    print('GPIO recording started. Waiting for interrupt.')
+    signal.pause()
 
 
 if __name__ == '__main__':

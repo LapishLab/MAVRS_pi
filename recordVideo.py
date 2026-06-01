@@ -2,7 +2,7 @@
 import signal, os
 from pathlib import Path
 from sys import exit
-from time import sleep
+from typing import Optional
 from argparse import ArgumentParser
 from datetime import datetime
 from picamera2 import Picamera2
@@ -25,7 +25,7 @@ def script_args():
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
-def main(save_dir: str = None):
+def main(save_dir: Optional[str] = None):
     if save_dir is None:
         save_dir = default_data_path()
     else:
@@ -33,8 +33,7 @@ def main(save_dir: str = None):
     save_dir = save_dir /  'cam'
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    #Turn off Info and warning logging
-    Picamera2.set_logging(Picamera2.WARNING)
+    #Turn off excessive libcamera info 
     os.environ["LIBCAMERA_LOG_LEVELS"]="3"
 
     hardware_settings = load_hardware_settings()
@@ -57,12 +56,11 @@ def main(save_dir: str = None):
     signal.signal(signal.SIGTERM, endRecording)
 
     #Wait until interrupt
-    try:
-        while True: sleep(1)
-    except KeyboardInterrupt:
-        endRecording(0,None)
+    print('Video started. Waiting for interrupt.')
+    signal.pause()
 
 def endRecording(sig, frame):
+    print('Stopping video recording...')
     picam2.stop_recording()
     print('recordVideo.py finished')
     exit(0)

@@ -2,7 +2,7 @@ from pathlib import Path
 from argparse import ArgumentParser
 from config import default_data_path
 import signal
-from time import sleep
+from typing import Optional
 from subprocess import Popen
 import sys
 
@@ -20,7 +20,7 @@ def script_args() -> dict:
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
-def main(save_dir: str = None, sample_rate: int = 250000, auto_save_interval: int = 5, heterodyne: int = None) -> None:
+def main(save_dir: Optional[str] = None, sample_rate: int = 250000, auto_save_interval: int = 5, heterodyne: Optional[int] = None) -> None:
     if save_dir is None:
         save_dir = default_data_path()
     else:
@@ -48,11 +48,10 @@ def main(save_dir: str = None, sample_rate: int = 250000, auto_save_interval: in
 	# Register the SIGTERM handler
     signal.signal(signal.SIGTERM, handle_sigterm)
     signal.signal(signal.SIGINT, handle_sigterm)  # SIGINT is for handling Ctrl+C gracefully
-    try:
-        while True:
-            sleep(1)
-    except KeyboardInterrupt:
-        handle_sigterm(None, None)
+    
+    #Wait until interrupt
+    print('Audio recording started. Waiting for interrupt.')
+    signal.pause()
         
 if __name__ == '__main__':
     args = script_args()

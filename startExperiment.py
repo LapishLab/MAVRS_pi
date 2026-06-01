@@ -8,7 +8,6 @@ import recordAudio
 import recordVideo
 import recordInput
 import signal
-from time import sleep
 import sys
 
 def script_args() -> dict:
@@ -46,11 +45,8 @@ def main(session: Optional[str] = None) -> None:
 	signal.signal(signal.SIGTERM, handle_sigterm)
 	signal.signal(signal.SIGINT, handle_sigterm)  # SIGINT is for handling Ctrl+C gracefully
 
-	try:
-		while True:
-			sleep(1)
-	except KeyboardInterrupt:
-		handle_sigterm(None, None)
+	print('Experiment started. Waiting for interput.')
+	signal.pause()  # Wait indefinitely until a signal is received
 
 if __name__ == '__main__':
 	args = script_args()
