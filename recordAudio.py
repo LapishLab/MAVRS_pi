@@ -4,7 +4,7 @@ from config import default_data_path
 import signal
 from typing import Optional
 from subprocess import Popen
-import sys
+import threading
 
 def script_args() -> dict:
     parser = ArgumentParser(description='Record audio.')
@@ -39,19 +39,18 @@ def main(save_dir: Optional[str] = None, sample_rate: int = 250000, auto_save_in
     print('starting audio recording')
     p = Popen(c)
 
-    def handle_sigterm(signum, frame):
-        print("\nEnding Audio recording")
-        if p.poll() is None:  # Check if the process is still running
-            p.terminate()
-        sys.exit(0)
+    # Define a signal handler to cleanly exit on interrupt
+    stop_event = threading.Event()
+    stop_func = lambda sig, frame: stop_event.set()
+    stop_signals = [signal.SIGINT, signal.SIGTERM]
+    [signal.signal(sig, stop_func) for sig in stop_signals]
 
-	# Register the SIGTERM handler
-    signal.signal(signal.SIGTERM, handle_sigterm)
-    signal.signal(signal.SIGINT, handle_sigterm)  # SIGINT is for handling Ctrl+C gracefully
-    
-    #Wait until interrupt
+    # Wait until interrupt, then terminate the subprocess
     print('Audio recording started. Waiting for interrupt.')
-    signal.pause()
+    stop_event.wait()
+    print("\nEnding Audio recording")
+    if p.poll() is None:  # Check if the process is still running
+        p.terminate()
         
 if __name__ == '__main__':
     args = script_args()

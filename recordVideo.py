@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import signal, os
+import threading
 from pathlib import Path
-from sys import exit
 from typing import Optional
 from argparse import ArgumentParser
 from datetime import datetime
@@ -51,20 +51,18 @@ def main(save_dir: Optional[str] = None):
         quality = Quality[hardware_settings['camera']['quality']]
         )
 
-    #register Interups
-    signal.signal(signal.SIGINT, endRecording)
-    signal.signal(signal.SIGTERM, endRecording)
+    # Define a signal handler to cleanly exit on interrupt
+    stop_event = threading.Event()
+    stop_func = lambda sig, frame: stop_event.set()
+    stop_signals = [signal.SIGINT, signal.SIGTERM]
+    [signal.signal(sig, stop_func) for sig in stop_signals]
 
-    #Wait until interrupt
+    # Wait until interrupted, then stop recording
     print('Video started. Waiting for interrupt.')
-    signal.pause()
-
-def endRecording(sig, frame):
+    stop_event.wait()
     print('Stopping video recording...')
     picam2.stop_recording()
     print('recordVideo.py finished')
-    exit(0)
-
 
 def load_hardware_settings():
     with open(CONFIG_YAML, 'r') as f:

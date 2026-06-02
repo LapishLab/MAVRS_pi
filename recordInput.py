@@ -1,7 +1,6 @@
 #! /bin/python
-import signal, os
+import signal, threading
 from pathlib import Path
-from sys import exit
 from typing import Optional
 from argparse import ArgumentParser
 from gpiozero import Button 
@@ -50,16 +49,19 @@ def main(save_dir: Optional[str] = None) -> None:
         button.when_released = lambda pin=button.pin.number: log_event(pin, '1') 
         button.when_pressed = lambda pin=button.pin.number: log_event(pin, '0') 
 
-    def endRecording(sig, frame):
-        print('recordInput.py finished')
-        exit(0)
+    # Define a signal handler to cleanly exit on interrupt
+    stop_event = threading.Event()
+    stop_func = lambda sig, frame: stop_event.set()
+    stop_signals = [signal.SIGINT, signal.SIGTERM]
+    [signal.signal(sig, stop_func) for sig in stop_signals]
 
-    signal.signal(signal.SIGINT, endRecording)
-    signal.signal(signal.SIGTERM, endRecording)
-
-    #Wait until interrupt
+    # Wait until interrupt
     print('GPIO recording started. Waiting for interrupt.')
-    signal.pause()
+    stop_event.wait()
+
+    # Clean up GPIO resources before exit
+    [b.close() for b in buttons]
+    print('recordInput.py finished')
 
 
 if __name__ == '__main__':

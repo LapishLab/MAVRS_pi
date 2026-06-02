@@ -4,11 +4,11 @@ from datetime import datetime
 from typing import Optional
 from config import DATA_DIR, HOSTNAME
 from multiprocessing import Process
+import threading
 import recordAudio
 import recordVideo
 import recordInput
 import signal
-import sys
 
 def script_args() -> dict:
 	parser = ArgumentParser(description='start an experiment')
@@ -32,21 +32,23 @@ def main(session: Optional[str] = None) -> None:
 	for p in procs:
 		p.start()
 
-	def handle_sigterm(signum, frame):
-		print("\nCleaning up processes...")
-		for p in procs:
-			if p.is_alive():
-				p.terminate()
-		for p in procs:
-			p.join()
-		sys.exit(0)
+   # Define a signal handler to cleanly exit on interrupt
+	stop_event = threading.Event()
+	stop_func = lambda sig, frame: stop_event.set()
+	stop_signals = [signal.SIGINT, signal.SIGTERM]
+	[signal.signal(sig, stop_func) for sig in stop_signals]
+	
+	# Wait until interrupt, then terminate the subprocesses
+	print('Experiment started. Waiting for interrupt.')
+	stop_event.wait()
 
-	# Register the SIGTERM handler
-	signal.signal(signal.SIGTERM, handle_sigterm)
-	signal.signal(signal.SIGINT, handle_sigterm)  # SIGINT is for handling Ctrl+C gracefully
-
-	print('Experiment started. Waiting for interput.')
-	signal.pause()  # Wait indefinitely until a signal is received
+	# Clean up processes after signal
+	print("\nCleaning up processes...")
+	for p in procs:
+		if p.is_alive():
+			p.terminate()
+	for p in procs:
+		p.join()
 
 if __name__ == '__main__':
 	args = script_args()
