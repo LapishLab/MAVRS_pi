@@ -12,8 +12,6 @@ import yaml
 from config import CONFIG_YAML
 from utilities import get_filename, get_stop_event
 
-picam2 = None # set in configure_camera()
-
 def script_args():
     #Parse recording settings
     parser = ArgumentParser(description='Display and record video.')
@@ -24,12 +22,11 @@ def script_args():
     return {k: v for k, v in vars(args).items() if v is not None}
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
-    #Turn off excessive libcamera info 
-    os.environ["LIBCAMERA_LOG_LEVELS"]="3"
+    with open(CONFIG_YAML, 'r') as f:
+        hardware_settings = yaml.full_load(f)
 
-    hardware_settings = load_hardware_settings()
-    configure_camera(hardware_settings['camera'])
-    start_preview(hardware_settings['display'])
+    picam2 = configure_camera(hardware_settings['camera'])
+    start_preview(picam2, hardware_settings['display'])
 
     saveFile = get_filename(save_dir=save_dir, subfolder='cam', extension='.mp4').as_posix() #picamera2 requires string path
     output = FfmpegOutput(
@@ -52,10 +49,6 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
     picam2.stop_recording()
     print('finished - recordVideo.py')
 
-def load_hardware_settings():
-    with open(CONFIG_YAML, 'r') as f:
-            default_settings = yaml.full_load(f)
-    return default_settings
 
 def configure_camera(camera_settings):
     match camera_settings['sensor_mode']: 
@@ -69,13 +62,16 @@ def configure_camera(camera_settings):
             camera_settings['sensor_mode'] = 'HDR'
             sensor_mode_index = 0
 
-    if camera_settings['sensor_mode'] == "HDR": #Need to turn ON/OFF HDR before instantiating picam2
+    #Turn off excessive libcamera info 
+    os.environ["LIBCAMERA_LOG_LEVELS"]="3"
+
+    #Need to turn ON/OFF HDR before instantiating picam2
+    if camera_settings['sensor_mode'] == "HDR": 
         os.system("v4l2-ctl --set-ctrl wide_dynamic_range=1 -d /dev/v4l-subdev0") #turn on HDR
     else:
         os.system("v4l2-ctl --set-ctrl wide_dynamic_range=0 -d /dev/v4l-subdev0") #turn off HDR
 
-    global picam2
-    picam2 = Picamera2() #Need to turn ON/OFF HDR before instantiating picam2
+    picam2 = Picamera2()
     sensor_mode = picam2.sensor_modes[sensor_mode_index]
     
     max_H264_res = (1920,1080)
@@ -92,8 +88,9 @@ def configure_camera(camera_settings):
     )
     picam2.align_configuration(config) #set optimal image size for main stream
     picam2.configure(config)
+    return picam2
 
-def start_preview(display_settings):
+def start_preview(picam2: Picamera2, display_settings: dict):
     if display_settings['enable']:
         print('Starting preview window')
         os.environ["DISPLAY"] = ':0' 
