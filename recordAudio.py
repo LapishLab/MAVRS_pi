@@ -3,8 +3,9 @@ from argparse import ArgumentParser
 from config import default_data_path
 import signal
 from typing import Optional
-from subprocess import Popen
+from subprocess import Popen, TimeoutExpired
 import threading
+from multiprocessing.synchronize import Event
 
 def script_args() -> dict:
     parser = ArgumentParser(description='Record audio.')
@@ -20,7 +21,7 @@ def script_args() -> dict:
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
-def main(save_dir: Optional[str] = None, sample_rate: int = 250000, auto_save_interval: int = 5, heterodyne: Optional[int] = None) -> None:
+def main(save_dir: Optional[str] = None, sample_rate: int = 250000, auto_save_interval: int = 5, heterodyne: Optional[int] = None, ready_event: Optional[Event] = None) -> None:
     if save_dir is None:
         save_dir = default_data_path()
     else:
@@ -47,10 +48,19 @@ def main(save_dir: Optional[str] = None, sample_rate: int = 250000, auto_save_in
 
     # Wait until interrupt, then terminate the subprocess
     print('Audio recording started. Waiting for interrupt.')
+    if ready_event is not None:
+        ready_event.set()
     stop_event.wait()
-    print("\nEnding Audio recording")
-    if p.poll() is None:  # Check if the process is still running
+
+    print("closing - recordAudio.py")
+    try:
         p.terminate()
+        p.wait(timeout=5)
+    except TimeoutExpired:
+        print('AudioMoth-Live did not exit; killing.')
+        p.kill()
+        p.wait()
+    print("finished - recordAudio.py")
         
 if __name__ == '__main__':
     args = script_args()

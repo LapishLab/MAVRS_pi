@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from multiprocessing.synchronize import Event
 import signal, os
 import threading
 from pathlib import Path
@@ -25,7 +26,7 @@ def script_args():
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
-def main(save_dir: Optional[str] = None):
+def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
     if save_dir is None:
         save_dir = default_data_path()
     else:
@@ -59,10 +60,12 @@ def main(save_dir: Optional[str] = None):
 
     # Wait until interrupted, then stop recording
     print('Video started. Waiting for interrupt.')
+    if ready_event is not None:
+        ready_event.set()
     stop_event.wait()
-    print('Stopping video recording...')
+    print('closing - recordVideo.py')
     picam2.stop_recording()
-    print('recordVideo.py finished')
+    print('finished - recordVideo.py')
 
 def load_hardware_settings():
     with open(CONFIG_YAML, 'r') as f:

@@ -7,6 +7,7 @@ from gpiozero import Button
 from datetime import datetime
 from csv import DictWriter
 from config import default_data_path
+from multiprocessing.synchronize import Event
 
 def script_args() -> dict:
     parser = ArgumentParser(description='Record GPIO pin 16')
@@ -17,7 +18,7 @@ def script_args() -> dict:
     return {k: v for k, v in vars(args).items() if v is not None}
 
 
-def main(save_dir: Optional[str] = None) -> None:
+def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
     pins = [16]  # List of GPIO pins to monitor 
     csvFields = ['Time', 'Pin', 'Event']
 
@@ -57,11 +58,14 @@ def main(save_dir: Optional[str] = None) -> None:
 
     # Wait until interrupt
     print('GPIO recording started. Waiting for interrupt.')
+    if ready_event is not None:
+        ready_event.set()
     stop_event.wait()
 
     # Clean up GPIO resources before exit
+    print('closing - recordInput.py')
     [b.close() for b in buttons]
-    print('recordInput.py finished')
+    print('finished - recordInput.py')
 
 
 if __name__ == '__main__':
