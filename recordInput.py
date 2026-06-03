@@ -40,10 +40,11 @@ def start_recording(saveFile, pins = [16]) -> list[Button]:
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
     saveFile = get_filename(save_dir=save_dir, subfolder='gpio', extension='.csv')
+    print(f'Saving GPIO data in {saveFile}')
     buttons = start_recording(saveFile)
     stop_event = get_stop_event()
 
-    # Signal that recording has started sucessfully
+    
     if ready_event is not None:
         ready_event.set()
 

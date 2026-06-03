@@ -25,5 +25,4 @@ def get_filename(save_dir: Optional[str] = None, subfolder: str = '', extension:
 
     now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     saveFile = save_dir / (now + extension)
-    print(f'SavingFile as {saveFile}')
     return saveFile
