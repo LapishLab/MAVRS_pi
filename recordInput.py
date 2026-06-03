@@ -1,5 +1,4 @@
 #! /bin/python
-import signal, threading
 from pathlib import Path
 from typing import Optional
 from argparse import ArgumentParser
@@ -8,6 +7,7 @@ from datetime import datetime
 from csv import DictWriter
 from config import default_data_path
 from multiprocessing.synchronize import Event
+from utilities import get_stop_event, get_filename
 
 def script_args() -> dict:
     parser = ArgumentParser(description='Record GPIO pin 16')
@@ -17,21 +17,8 @@ def script_args() -> dict:
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
-
-def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
-    pins = [16]  # List of GPIO pins to monitor 
+def start_recording(saveFile, pins = [16]) -> list[Button]:
     csvFields = ['Time', 'Pin', 'Event']
-
-    if save_dir is None:
-        save_dir = default_data_path()
-    else:
-        save_dir = Path(save_dir)
-    save_dir = save_dir / 'gpio'
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    now = datetime.now().strftime("%Y%m%d_%H%M%S")
-    saveFile = save_dir / (now + '.csv')
-    print('SavingFile as ' + str(saveFile))
 
     # Create or open the CSV file and write the header 
     with open(saveFile, "w", newline='') as csvfile: 
@@ -48,18 +35,20 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
     buttons = [Button(pin, bounce_time=0.1) for pin in pins]
     for button in buttons: 
         button.when_released = lambda pin=button.pin.number: log_event(pin, '1') 
-        button.when_pressed = lambda pin=button.pin.number: log_event(pin, '0') 
+        button.when_pressed = lambda pin=button.pin.number: log_event(pin, '0')
+    return buttons
 
-    # Define a signal handler to cleanly exit on interrupt
-    stop_event = threading.Event()
-    stop_func = lambda sig, frame: stop_event.set()
-    stop_signals = [signal.SIGINT, signal.SIGTERM]
-    [signal.signal(sig, stop_func) for sig in stop_signals]
+def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
+    saveFile = get_filename(save_dir=save_dir, subfolder='gpio', extension='.csv')
+    buttons = start_recording(saveFile)
+    stop_event = get_stop_event()
+
+    # Signal that recording has started sucessfully
+    if ready_event is not None:
+        ready_event.set()
 
     # Wait until interrupt
     print('GPIO recording started. Waiting for interrupt.')
-    if ready_event is not None:
-        ready_event.set()
     stop_event.wait()
 
     # Clean up GPIO resources before exit
