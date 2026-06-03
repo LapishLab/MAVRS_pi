@@ -1,21 +1,18 @@
 #!/usr/bin/python3
 from multiprocessing.synchronize import Event
-import signal, os
-import threading
-from pathlib import Path
+import os
 from typing import Optional
 from argparse import ArgumentParser
-from datetime import datetime
 from picamera2 import Picamera2
 from picamera2.encoders import Quality
 from picamera2.outputs import FfmpegOutput
 from picamera2 import Preview
 from libcamera import Transform
 import yaml
-from config import default_data_path, CONFIG_YAML
+from config import CONFIG_YAML
+from utilities import get_filename, get_stop_event
 
 picam2 = None # set in configure_camera()
-
 
 def script_args():
     #Parse recording settings
@@ -27,13 +24,6 @@ def script_args():
     return {k: v for k, v in vars(args).items() if v is not None}
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
-    if save_dir is None:
-        save_dir = default_data_path()
-    else:
-        save_dir = Path(save_dir)
-    save_dir = save_dir /  'cam'
-    save_dir.mkdir(parents=True, exist_ok=True)
-
     #Turn off excessive libcamera info 
     os.environ["LIBCAMERA_LOG_LEVELS"]="3"
 
@@ -41,27 +31,22 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
     configure_camera(hardware_settings['camera'])
     start_preview(hardware_settings['display'])
 
-    # Set up save file
-    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    saveFile = get_filename(save_dir=save_dir, subfolder='cam', extension='.mp4').as_posix() #picamera2 requires string path
     output = FfmpegOutput(
-        output_filename= str(save_dir / f'{now}.mp4'),
-        pts = str(save_dir / f'{now}.pts')
+        output_filename=saveFile,
+        pts = saveFile.replace('.mp4', '.pts')
         )
     picam2.start_and_record_video(
         output = output,
         quality = Quality[hardware_settings['camera']['quality']]
         )
 
-    # Define a signal handler to cleanly exit on interrupt
-    stop_event = threading.Event()
-    stop_func = lambda sig, frame: stop_event.set()
-    stop_signals = [signal.SIGINT, signal.SIGTERM]
-    [signal.signal(sig, stop_func) for sig in stop_signals]
+    stop_event = get_stop_event()
+    if ready_event is not None:
+        ready_event.set()
 
     # Wait until interrupted, then stop recording
     print('Video started. Waiting for interrupt.')
-    if ready_event is not None:
-        ready_event.set()
     stop_event.wait()
     print('closing - recordVideo.py')
     picam2.stop_recording()
