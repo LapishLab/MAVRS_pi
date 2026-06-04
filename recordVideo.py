@@ -147,7 +147,7 @@ def h264_to_mp4(raw_video_path: str, frameRate: float) -> None:
 		print(f"Success! Perfect variable-framerate video saved to: {output_mp4_path}")
 		
 		# Optional: Delete the raw recovery files to save space
-		# os.remove(raw_video_path)
+		os.remove(raw_video_path)
 		# os.remove(pts_file_path)
 		
 	except subprocess.CalledProcessError as e:
@@ -156,3 +156,4 @@ def h264_to_mp4(raw_video_path: str, frameRate: float) -> None:
 if __name__ == "__main__":
 	args = script_args()
 	main(**args)
+	
