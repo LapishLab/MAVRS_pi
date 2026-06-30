@@ -1,17 +1,15 @@
 #!/usr/bin/python3
-import subprocess
 from multiprocessing.synchronize import Event
 import os
 from typing import Optional
 from argparse import ArgumentParser
 from picamera2 import Picamera2, Preview
 from picamera2.encoders import Quality, H264Encoder
-from picamera2.outputs import FileOutput
+from picamera2.outputs import FfmpegOutput
 from libcamera import Transform
 import yaml
 from config import CONFIG_YAML
 from utilities import get_filename, get_stop_event
-from pathlib import Path
 
 def script_args():
 	#Parse recording settings
@@ -30,7 +28,7 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
 
 	picam2 = configure_camera(hardware_settings['camera'])
 	start_preview(picam2, hardware_settings['display'])
-	saveFile = start_recording(picam2=picam2, save_dir=save_dir, quality=hardware_settings['camera']['quality'])
+	start_recording(picam2=picam2, save_dir=save_dir, quality=hardware_settings['camera']['quality'])
 
 	stop_event = get_stop_event()
 	if ready_event is not None:
@@ -43,21 +41,21 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
 	picam2.stop_recording()
 	picam2.stop_preview()
 	picam2.stop()
-	import time
-	start = time.time()
-	h264_to_mp4(raw_video_path=saveFile, frameRate = picam2.video_configuration.controls.FrameRate)
-	elapsed = time.time() - start
-	print(f'Video conversion completed in {elapsed:.2f} seconds.')
 	print('finished - recordVideo.py')
 
 
 def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str):
 	picam2.start()
-	ext = '.h264' #raw h264 stream from picamera2
+	ext = '.mp4'
 	saveFile = get_filename(save_dir=save_dir, subfolder='cam', extension=ext).as_posix() #picamera2 requires string path
+	
+	output = FfmpegOutput(
+		output_filename=saveFile,
+		pts = saveFile.replace(ext, '.pts')
+		)
+	
 	picam2.start_recording(
-		output=saveFile,
-		pts = saveFile.replace(ext, '.pts'),
+		output=output,
 		encoder=H264Encoder(),
 		quality=Quality[quality])
 	print(f'Saving video to {saveFile}')
@@ -122,38 +120,6 @@ def start_preview(picam2: Picamera2, display_settings: dict):
 		picam2.title_fields = display_settings['title_fields']
 
 
-def h264_to_mp4(raw_video_path: str, frameRate: float) -> None:
-	output_mp4_path = raw_video_path.replace('.h264', '.mp4')
-	
-	if not os.path.exists(raw_video_path):
-		print(f"Error: Raw video file not found at {raw_video_path}. Cannot convert to MP4.")
-		return
-	
-	print(f"Converting raw H264 to mp4 using pts: {raw_video_path}")
-	
-	# FFmpeg command structure
-	cmd = [
-		"ffmpeg", "-y",
-		"-r", str(frameRate),
-		"-f", "h264",
-		"-i", raw_video_path,
-		"-c:v", "copy",
-		output_mp4_path
-	]
-	
-	try:
-		# Run the command and hide unnecessary terminal spam
-		subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-		print(f"Success! Perfect variable-framerate video saved to: {output_mp4_path}")
-		
-		# Optional: Delete the raw recovery files to save space
-		os.remove(raw_video_path)
-		# os.remove(pts_file_path)
-		
-	except subprocess.CalledProcessError as e:
-		print(f"Muxing failed. FFmpeg Error:\n{e.stderr.decode()}")
-
 if __name__ == "__main__":
 	args = script_args()
 	main(**args)
-	
