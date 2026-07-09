@@ -8,6 +8,7 @@ import threading
 import recordAudio
 import recordVideo
 import recordInput
+import recordCom
 import signal
 from time import time
 
@@ -26,7 +27,7 @@ def main(session: Optional[str] = None) -> None:
 	saveDir = DATA_DIR / session / HOSTNAME
 
 	# Make a list of processes for each recording modality along with an Event for each to signal when they are ready
-	funcs = [recordInput.main, recordAudio.main, recordVideo.main]
+	funcs = [recordInput.main, recordCom.main, recordAudio.main, recordVideo.main]
 	procs = []
 	ready_events = []
 	for f in funcs:

@@ -4,7 +4,7 @@ camera:
   quality : MEDIUM  #VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW
 
 display:
-  enable: True
+  enable: False
   size_x: 800
   size_y: 480
   horizontal_flip: False
