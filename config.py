@@ -5,7 +5,8 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
 DATA_DIR = ROOT_DIR / "data"
-CONFIG_YAML = ROOT_DIR / "default_settings.yaml"
+DEFAULT_SETTINGS_FILE = ROOT_DIR / "default_settings.yaml"
+USER_SETTINGS_FILE = Path.home() / "mavrs_pi_config.yaml"
 
 HOSTNAME = os.uname().nodename
 # Automatically create folders if they don't exist
