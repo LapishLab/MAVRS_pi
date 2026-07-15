@@ -7,9 +7,7 @@ from picamera2 import Picamera2, Preview
 from picamera2.encoders import Quality, H264Encoder
 from picamera2.outputs import FfmpegOutput
 from libcamera import Transform
-import yaml
-from config import CONFIG_YAML
-from utilities import get_filename, get_stop_event
+from utilities import get_filename, get_stop_event, get_settings
 
 def script_args():
 	#Parse recording settings
@@ -23,8 +21,7 @@ def script_args():
 
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
-	with open(CONFIG_YAML, 'r') as f:
-		hardware_settings = yaml.full_load(f)
+	hardware_settings = get_settings()
 
 	picam2 = configure_camera(hardware_settings['camera'])
 	start_preview(picam2, hardware_settings['display'])

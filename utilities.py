@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 from config import default_data_path
+from config import CONFIG_YAML
+import yaml
 
 
 def get_stop_event():
@@ -26,3 +28,9 @@ def get_filename(save_dir: Optional[str] = None, subfolder: str = '', extension:
     now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     saveFile = save_dir / (now + extension)
     return saveFile
+
+def get_settings():
+    with open(CONFIG_YAML, 'r') as f:
+        settings = yaml.full_load(f)
+    return settings
+    
