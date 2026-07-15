@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 from config import DATA_DIR, HOSTNAME
 from multiprocessing import Process, Event
+from utilities import get_settings
 import threading
 import recordAudio
 import recordVideo
@@ -26,7 +27,12 @@ def main(session: Optional[str] = None) -> None:
 	saveDir = DATA_DIR / session / HOSTNAME
 
 	# Make a list of processes for each recording modality along with an Event for each to signal when they are ready
-	funcs = [recordInput.main, recordAudio.main, recordVideo.main]
+	recordings = get_settings()['recordings']
+	funcs = [] # List of recording modalities function entry points
+	if recordings['gpio']: funcs.append(recordInput.main)
+	if recordings['audio']: funcs.append(recordAudio.main)
+	if recordings['video']: funcs.append(recordVideo.main)
+
 	procs = []
 	ready_events = []
 	for f in funcs:
