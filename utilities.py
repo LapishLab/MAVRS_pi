@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Optional
 from datetime import datetime
 from config import default_data_path
-from config import CONFIG_YAML
+from config import DEFAULT_SETTINGS_FILE, USER_SETTINGS_FILE
 import yaml
+import shutil
 
 
 def get_stop_event():
@@ -30,7 +31,15 @@ def get_filename(save_dir: Optional[str] = None, subfolder: str = '', extension:
     return saveFile
 
 def get_settings():
-    with open(CONFIG_YAML, 'r') as f:
+    with open(DEFAULT_SETTINGS_FILE, 'r') as f:
         settings = yaml.full_load(f)
-    return settings
+
+    if not USER_SETTINGS_FILE.exists():
+         print(f"No user settings file found. Copying default settings file to {USER_SETTINGS_FILE}")
+         shutil.copy2(DEFAULT_SETTINGS_FILE, USER_SETTINGS_FILE)
     
+    with open(USER_SETTINGS_FILE, 'r') as f:
+        user_settings = yaml.full_load(f)
+
+    settings.update(user_settings) # Overwrite default settings with any modified user settings
+    return settings
