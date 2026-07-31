@@ -12,7 +12,7 @@ import recordInput
 import signal
 from time import time
 
-def script_args() -> dict:
+def script_args() -> dict[str, str]:
 	parser = ArgumentParser(description='start an experiment')
 	parser.add_argument('--session', type=str,
 		help='SessionName (default current date and time in YYYYMMDD_HHMMSS format)')

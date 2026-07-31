@@ -9,7 +9,7 @@ from picamera2.outputs import FfmpegOutput
 from libcamera import Transform
 from utilities import get_filename, get_stop_event, get_settings
 
-def script_args():
+def script_args() -> dict[str, str]:
 	#Parse recording settings
 	parser = ArgumentParser(description='Display and record video.')
 	parser.add_argument('--saveDir', type=str,
@@ -20,7 +20,7 @@ def script_args():
 
 
 
-def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
+def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
 	hardware_settings = get_settings()
 
 	picam2 = configure_camera(hardware_settings['camera'])
@@ -41,7 +41,7 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
 	print('finished - recordVideo.py')
 
 
-def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str):
+def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str) -> str:
 	picam2.start()
 	ext = '.mp4'
 	saveFile = get_filename(save_dir=save_dir, subfolder='cam', extension=ext).as_posix() #picamera2 requires string path
@@ -59,7 +59,7 @@ def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str):
 	return saveFile
 
 
-def configure_camera(camera_settings):
+def configure_camera(camera_settings: dict) -> Picamera2:
 	match camera_settings['sensor_mode']: 
 		case 'low_res':
 			sensor_mode_index = 0
@@ -99,7 +99,7 @@ def configure_camera(camera_settings):
 	picam2.configure(config)
 	return picam2
 
-def start_preview(picam2: Picamera2, display_settings: dict):
+def start_preview(picam2: Picamera2, display_settings: dict) -> None:
 	if display_settings['enable']:
 		print('Starting preview window')
 		os.environ["DISPLAY"] = ':0' 

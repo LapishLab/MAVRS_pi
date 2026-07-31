@@ -9,7 +9,7 @@ from config import default_data_path
 from multiprocessing.synchronize import Event
 from utilities import get_stop_event, get_filename
 
-def script_args() -> dict:
+def script_args() -> dict[str, str]:
     parser = ArgumentParser(description='Record GPIO pin 16')
     parser.add_argument('--saveDir', type=str, 
         help='Path within the Data folder to which data will be saved')
@@ -17,7 +17,7 @@ def script_args() -> dict:
     # Filter out None values and return dict
     return {k: v for k, v in vars(args).items() if v is not None}
 
-def start_recording(saveFile, pins = [16]) -> list[Button]:
+def start_recording(saveFile: str | Path, pins: list[int] = [16]) -> list[Button]:
     csvFields = ['Time', 'Pin', 'Event']
 
     # Create or open the CSV file and write the header 

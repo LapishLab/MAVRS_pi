@@ -1,7 +1,8 @@
 
-import signal, threading
+import signal
+import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 from config import default_data_path
 from config import DEFAULT_SETTINGS_FILE, USER_SETTINGS_FILE
@@ -9,7 +10,7 @@ import yaml
 import shutil
 
 
-def get_stop_event():
+def get_stop_event() -> threading.Event:
 	# Define a signal handler to cleanly exit on interrupt
 	stop_event = threading.Event()
 	stop_func = lambda sig, frame: stop_event.set()
@@ -18,7 +19,7 @@ def get_stop_event():
 	return stop_event
 
 
-def get_filename(save_dir: Optional[str] = None, subfolder: str = '', extension: str = '') -> Path:
+def get_filename(save_dir: Optional[str | Path] = None, subfolder: str = '', extension: str = '') -> Path:
     if save_dir is None:
         save_dir = default_data_path()
     else:
@@ -30,7 +31,7 @@ def get_filename(save_dir: Optional[str] = None, subfolder: str = '', extension:
     saveFile = save_dir / (now + extension)
     return saveFile
 
-def get_settings():
+def get_settings() -> dict[str, Any]:
     with open(DEFAULT_SETTINGS_FILE, 'r') as f:
         settings = yaml.full_load(f)
 
