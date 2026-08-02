@@ -19,7 +19,7 @@ def get_stop_event() -> threading.Event:
 	return stop_event
 
 
-def get_filename(save_dir: Optional[str | Path] = None, subfolder: str = '', extension: str = '') -> Path:
+def get_filename(save_dir: Optional[str | Path] = None, subfolder: str = '', extension: str = '', time_ns: Optional[int] = None) -> Path:
     if save_dir is None:
         save_dir = default_data_path()
     else:
@@ -27,8 +27,12 @@ def get_filename(save_dir: Optional[str | Path] = None, subfolder: str = '', ext
     save_dir = save_dir / subfolder
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    now = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    saveFile = save_dir / (now + extension)
+    if time_ns:
+        dt = datetime.fromtimestamp(time_ns / 1_000_000_000)
+    else:
+        dt = datetime.now()
+    time_str = dt.strftime("%Y%m%d_%H%M%S_%f")
+    saveFile = save_dir / (time_str + extension)
     return saveFile
 
 def get_settings() -> dict[str, Any]:
