@@ -12,6 +12,7 @@ from sounddevice import InputStream
 from soundfile import SoundFile
 import numpy as np
 from typing import Protocol, TextIO, Optional
+import threading
 
 # --- Hardware Configuration ---
 SAMPLE_RATE: int = 250000
@@ -31,15 +32,45 @@ class AudioPacket:
         self.n_samples = n
         self.data = data
 
+class MetadataWriter(threading.Thread):
+    def __init__(self, file_path: str, file_start_ns: int):
+        super().__init__()
+        self.file_start_ns = file_start_ns
+        self.file_path = file_path
+        self._stop = object()
+        self.q = Queue()
+        self.start()  # Start the thread upon initialization
+        # self.np_array = np.array([], dtype=np.int16)  # Placeholder for metadata
+        
+    def run(self):
+        with open(self.file_path, 'w') as f:
+            f.write('sample, file_us \n')
+
+            current_sample: int = 0
+            while True:
+                item = self.q.get(timeout=1.0)
+                if item is self._stop:
+                    break
+                n_samples, system_time_ns = item
+
+                elapsed_us = int((system_time_ns - self.file_start_ns) / 1000)
+                f.write(f'{current_sample}, {elapsed_us} \n')
+                current_sample += n_samples
+
+    def add(self, n_samples: int, system_time_ns: int):
+        self.q.put((n_samples, system_time_ns))
+
+    def stop(self):
+        self.q.put(self._stop)
+        self.join()  # Wait for the thread to finish
+
 
 class AudioWriter:
     """Writer to handle audio data and timestamps, writing to WAV and CSV files."""
     def __init__(self, save_dir: Optional[str] = None, ready_event: Optional[Event] = None):
         self.save_dir = save_dir
         self.wav_file: Optional[SoundFile] = None
-        self.csv_file: Optional[TextIO] = None
-        self.file_start_ns: int = 0
-        self.current_sample: int = 0
+        self.metadata_writer: Optional[MetadataWriter] = None      
         self.audio_queue: Queue[AudioPacket] = Queue()
         self.stop_event = get_stop_event()
         self.ready_event = ready_event
@@ -73,9 +104,8 @@ class AudioWriter:
     def open_new_files(self, time_ns: int) -> None:
         wav_filename = get_filename(save_dir=self.save_dir, subfolder='mic', extension='.wav', time_ns=time_ns)
         wav_filename = str(wav_filename)
-        csv_filename =  wav_filename.replace('.wav', '.csv')
 
-        print(f"Creating: {wav_filename} and {csv_filename}")
+        print(f"Creating: {wav_filename}")
         self.wav_file = SoundFile(
             wav_filename,
             mode='x',  # Prevents accidental file overwrites
@@ -83,28 +113,23 @@ class AudioWriter:
             channels=CHANNELS,
             subtype='PCM_16'
         )
-        self.csv_file = open(csv_filename, 'w')
-        self.csv_file.write('sample, file_us \n')
-        self.file_start_ns = time_ns
-        self.current_sample = 0
+        self.metadata_writer = MetadataWriter(wav_filename.replace('.wav', '.csv'), time_ns)
 
     def write_packet(self, packet: AudioPacket) -> None:
-        if self.wav_file is None or self.csv_file is None:
+        if self.wav_file is None or self.metadata_writer is None:
             raise RuntimeError("Files are not open. Call open_new_files() first.")
         
         self.wav_file.write(packet.data)
-        elapsed_us = int((packet.system_time_ns - self.file_start_ns) / 1000)
-        self.csv_file.write(f'{self.current_sample}, {elapsed_us} \n')
-        self.current_sample += packet.n_samples
+        self.metadata_writer.add(packet.n_samples, packet.system_time_ns)
 
     def close_files(self) -> None:
         if self.wav_file:
             self.wav_file.close()
             self.wav_file = None
-        if self.csv_file:
-            self.csv_file.close()
-            self.csv_file = None
-        
+        if self.metadata_writer:
+            self.metadata_writer.stop()
+            self.metadata_writer.join()
+
     def audio_callback(self, data: np.ndarray, frames: int, t: PortAudioTimeInfo, status) -> None:
         now_ns: int = time.time_ns()
         mic_latency_ns: int = int((t.currentTime - t.inputBufferAdcTime)*1_000_000_000)
