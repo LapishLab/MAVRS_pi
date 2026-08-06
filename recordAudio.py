@@ -15,7 +15,7 @@ import config
 # --- Hardware Configuration ---
 SAMPLE_RATE: int = 250000
 CHANNELS: int = 1
-BLOCK_SIZE: int = 4096     # 16.38ms chunks at 250kHz
+BLOCK_SIZE: int = 16384    # 65.54ms chunks at 250kHz
 DEVICE_INDEX: str = 'hw:3,0'
 
 from audioWriter import AudioWriter
@@ -36,13 +36,15 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
     print(f"Initializing PortAudio device #{DEVICE_INDEX} at {SAMPLE_RATE} Hz...")
 
     writer_add = writer.add
+    writer_log_warning = writer.log_warning
+
     def audio_callback(data: np.ndarray, frames: int, t: PortAudioTimeInfo, status) -> None:
         now_ns: int = time.time_ns()
         mic_latency_ns: int = int((t.currentTime - t.inputBufferAdcTime) * 1e9)
         sample_ns: int = now_ns - mic_latency_ns
         writer_add(sample_ns, frames, data)
         if status:
-            print(f"PortAudio Status Flag: {status}", flush=True)
+            writer_log_warning(f"PortAudio: {status}")
 
     stream = InputStream(
         device=DEVICE_INDEX,
