@@ -13,22 +13,16 @@ from typing import Protocol, Optional
 import config
 from pathlib import Path
 
-# --- Hardware Configuration ---
-SAMPLE_RATE: int = 250000
-CHANNELS: int = 1
-BLOCK_SIZE: int = 16384    # 65.54ms chunks at 250kHz
-DEVICE_NAME: str = '384kHz AudioMoth USB Microphone'
-
 from audioWriter import AudioWriter
 
 
-def find_device_index() -> int:
-    """Return the PortAudio index for the AudioMoth USB microphone."""
+def find_device_index(device_name: str) -> int:
+    """Return the PortAudio index for the configured input device."""
     for index, device in enumerate(query_devices()):
-        if device['name'].startswith(DEVICE_NAME) and device['max_input_channels'] > 0:
+        if device['name'].startswith(device_name) and device['max_input_channels'] > 0:
             return index
 
-    raise RuntimeError(f'Audio input device not found: {DEVICE_NAME}')
+    raise RuntimeError(f'Audio input device not found: {device_name}')
 
 
 class PortAudioTimeInfo(Protocol):
@@ -37,17 +31,23 @@ class PortAudioTimeInfo(Protocol):
     currentTime: float
 
 
-def main(save_dir: Optional[Path | str] = None, ready_event: Optional[Event] = None) -> None:
-    device_index = find_device_index()
+def main(
+    save_dir: Optional[Path | str] = None,
+    ready_event: Optional[Event] = None,
+    sample_rate: int = 250000,
+    block_size: int = 16384,
+    device_name: str = '384kHz AudioMoth USB Microphone',
+) -> None:
+    device_index = find_device_index(device_name)
 
     if save_dir is None:
         save_dir = config.default_data_path()
         save_dir.mkdir(parents=True, exist_ok=True)
 
-    writer = AudioWriter(str(save_dir))
+    writer = AudioWriter(str(save_dir), sample_rate, block_size)
 
     stop_event = get_stop_event()
-    print(f"Initializing PortAudio device #{device_index} at {SAMPLE_RATE} Hz...")
+    print(f"Initializing PortAudio device #{device_index} at {sample_rate} Hz...")
 
     writer_add = writer.add
     writer_log_warning = writer.log_warning
@@ -62,9 +62,9 @@ def main(save_dir: Optional[Path | str] = None, ready_event: Optional[Event] = N
 
     stream = InputStream(
         device=device_index,
-        samplerate=SAMPLE_RATE,
-        channels=CHANNELS,
-        blocksize=BLOCK_SIZE,
+        samplerate=sample_rate,
+        channels=1,
+        blocksize=block_size,
         latency='high',
         dtype='int16',
         callback=audio_callback

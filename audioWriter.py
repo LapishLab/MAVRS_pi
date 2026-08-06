@@ -1,21 +1,11 @@
 #! /bin/python
 import os
-# These must be set BEFORE importing sounddevice to bypass PipeWire
-os.environ["PA_ALSA_PLUGHW"] = "1"
-os.environ["PA_ALSA_HOSTAPI"] = "ALSA"
-
 from utilities import get_filename
 from soundfile import SoundFile
 import numpy as np
 from typing import Optional
 import threading
-import h5py
 from datetime import datetime
-
-# --- Hardware Configuration ---
-SAMPLE_RATE: int = 250000
-CHANNELS: int = 1
-BLOCK_SIZE: int = 16384     # 16.38ms chunks at 250kHz
 
 class AudioPacket:
     """Preallocated container for one audio block."""
@@ -37,7 +27,7 @@ class AudioPacket:
 
 class AudioWriter(threading.Thread):
     """Writer to handle audio data and timestamps, writing to WAV and CSV metadata files."""
-    def __init__(self, save_dir: str):
+    def __init__(self, save_dir: str, sample_rate: int, block_size: int):
         super().__init__(daemon=True)
 
         # Initialize WAV and .csv files with temporary names; will rename later based on first packet timestamp
@@ -46,8 +36,8 @@ class AudioWriter(threading.Thread):
         self.wav_file: SoundFile = SoundFile(
             self.wav_filename,
             mode='x',
-            samplerate=SAMPLE_RATE,
-            channels=CHANNELS,
+            samplerate=sample_rate,
+            channels=1,
             subtype='PCM_16'
         )
 
@@ -60,7 +50,7 @@ class AudioWriter(threading.Thread):
         self.n_slots = 50
         self.write_idx = 0
         self.read_idx = 0
-        self.buffer = [AudioPacket(BLOCK_SIZE) for _ in range(self.n_slots)]
+        self.buffer = [AudioPacket(block_size) for _ in range(self.n_slots)]
 
         # Threading events to manage stopping and signaling when new data is available
         self._stop_event = threading.Event()
@@ -136,6 +126,4 @@ class AudioWriter(threading.Thread):
         if os.path.exists(self._metadata_file_path):
             os.rename(self._metadata_file_path, meta_path)
             self._metadata_file_path = meta_path
-
-
-
+            
