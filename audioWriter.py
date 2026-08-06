@@ -32,7 +32,10 @@ class AudioWriter(threading.Thread):
 
         # Initialize WAV and .csv files with temporary names; will rename later based on first packet timestamp
         self.save_dir = save_dir
-        self.wav_filename = save_dir + "/temp.wav"
+        mic_dir = os.path.join(save_dir, "mic")
+        if not os.path.exists(mic_dir):
+            os.mkdir(mic_dir)
+        self.wav_filename = mic_dir + "/temp.wav"
         self.wav_file: SoundFile = SoundFile(
             self.wav_filename,
             mode='x',
@@ -41,7 +44,7 @@ class AudioWriter(threading.Thread):
             subtype='PCM_16'
         )
 
-        self._metadata_file_path = save_dir + "/temp.csv"
+        self._metadata_file_path = mic_dir + "/temp.csv"
         self._metadata_file = open(self._metadata_file_path, "w", newline='')
         self._metadata_file.write('sample,file_us\n')
         self._current_sample = 0
@@ -59,7 +62,7 @@ class AudioWriter(threading.Thread):
         # File start time in nanoseconds, set when the first audio packet is added
         self._file_start_ns: Optional[int] = None
 
-        self._warning_log_path = os.path.join(save_dir, 'audio_writer.log')
+        self._warning_log_path = mic_dir + '/audio_writer.log'
         self._warning_file = open(self._warning_log_path, 'a', encoding='utf-8')
         self._warning_lock = threading.Lock()
 
