@@ -11,6 +11,7 @@ from sounddevice import InputStream, query_devices
 import numpy as np
 from typing import Protocol, Optional
 import config
+from pathlib import Path
 
 # --- Hardware Configuration ---
 SAMPLE_RATE: int = 250000
@@ -36,11 +37,13 @@ class PortAudioTimeInfo(Protocol):
     currentTime: float
 
 
-def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
+def main(save_dir: Optional[Path | str] = None, ready_event: Optional[Event] = None) -> None:
     device_index = find_device_index()
 
     if save_dir is None:
-        save_dir = str(config.default_data_path())
+        save_dir = config.default_data_path()
+        save_dir.mkdir(parents=True, exist_ok=True)
+
     writer = AudioWriter(str(save_dir))
 
     stop_event = get_stop_event()
