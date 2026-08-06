@@ -97,7 +97,17 @@ class AudioWriter(threading.Thread):
 
     def add(self, system_time_ns: int, n_samples: int, data: np.ndarray) -> None:
         """Add a new audio packet to the writer buffer."""
-        self._push(system_time_ns, n_samples, data)
+        if self._file_start_ns is None:
+            self._file_start_ns = system_time_ns
+
+        with self._data_available:
+            if self.write_idx - self.read_idx >= self.n_slots:
+                self.log_warning("AudioWriter: buffer overflow")
+                return
+            slot = self.buffer[self.write_idx % self.n_slots]
+            slot.set(system_time_ns, n_samples, data)
+            self.write_idx += 1
+            self._data_available.notify()
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -115,19 +125,6 @@ class AudioWriter(threading.Thread):
         timestamp = datetime.now().isoformat()
         with self._warning_lock:
             self._warning_file.write(timestamp + ": " + message + "\n")
-
-    def _push(self, system_time_ns: int, n_samples: int, data: np.ndarray) -> None:
-        if self._file_start_ns is None:
-            self._file_start_ns = system_time_ns
-
-        with self._data_available:
-            if self.write_idx - self.read_idx >= self.n_slots:
-                self.log_warning("AudioWriter: buffer overflow")
-                return
-            slot = self.buffer[self.write_idx % self.n_slots]
-            slot.set(system_time_ns, n_samples, data)
-            self.write_idx += 1
-            self._data_available.notify()
 
     def _rename_output_files(self, system_time_ns: int) -> None:
         wav_path = get_filename(save_dir=self.save_dir, subfolder='mic', extension='.wav', time_ns=system_time_ns)
