@@ -82,11 +82,12 @@ class AudioWriter(threading.Thread):
                 if self.read_idx >= self.write_idx and self._stop_event.is_set():
                     break
                 packet = self.buffer[self.read_idx % self.n_slots]
-                self.read_idx += 1
             self.wav_file.write(packet.data[:packet.n_samples])
             elapsed_us = int((packet.system_time_ns - self._file_start_ns) / 1000)
             self._metadata_file.write(str(self._current_sample) + "," + str(elapsed_us) + "\n")
             self._current_sample += packet.n_samples
+            with self._data_available:
+                self.read_idx += 1
 
     def add(self, system_time_ns: int, n_samples: int, data: np.ndarray) -> None:
         """Add a new audio packet to the writer buffer."""
@@ -129,4 +130,3 @@ class AudioWriter(threading.Thread):
         if os.path.exists(self._metadata_file_path):
             os.rename(self._metadata_file_path, meta_path)
             self._metadata_file_path = meta_path
-            
