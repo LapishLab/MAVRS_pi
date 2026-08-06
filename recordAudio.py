@@ -7,7 +7,7 @@ os.environ["PA_ALSA_HOSTAPI"] = "ALSA"
 from multiprocessing.synchronize import Event
 from utilities import get_stop_event
 import time
-from sounddevice import InputStream
+from sounddevice import InputStream, query_devices
 import numpy as np
 from typing import Protocol, Optional
 import config
@@ -16,9 +16,18 @@ import config
 SAMPLE_RATE: int = 250000
 CHANNELS: int = 1
 BLOCK_SIZE: int = 16384    # 65.54ms chunks at 250kHz
-DEVICE_INDEX: str = 'hw:3,0'
+DEVICE_NAME: str = '384kHz AudioMoth USB Microphone'
 
 from audioWriter import AudioWriter
+
+
+def find_device_index() -> int:
+    """Return the PortAudio index for the AudioMoth USB microphone."""
+    for index, device in enumerate(query_devices()):
+        if device['name'].startswith(DEVICE_NAME) and device['max_input_channels'] > 0:
+            return index
+
+    raise RuntimeError(f'Audio input device not found: {DEVICE_NAME}')
 
 
 class PortAudioTimeInfo(Protocol):
@@ -28,12 +37,14 @@ class PortAudioTimeInfo(Protocol):
 
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
+    device_index = find_device_index()
+
     if save_dir is None:
         save_dir = str(config.default_data_path())
     writer = AudioWriter(str(save_dir))
 
     stop_event = get_stop_event()
-    print(f"Initializing PortAudio device #{DEVICE_INDEX} at {SAMPLE_RATE} Hz...")
+    print(f"Initializing PortAudio device #{device_index} at {SAMPLE_RATE} Hz...")
 
     writer_add = writer.add
     writer_log_warning = writer.log_warning
@@ -47,7 +58,7 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
             writer_log_warning(f"PortAudio: {status}")
 
     stream = InputStream(
-        device=DEVICE_INDEX,
+        device=device_index,
         samplerate=SAMPLE_RATE,
         channels=CHANNELS,
         blocksize=BLOCK_SIZE,
