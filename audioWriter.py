@@ -69,13 +69,15 @@ class AudioWriter(threading.Thread):
         self.start()
 
     def run(self) -> None:
-        while self._file_start_ns is None:
-            with self._data_available:
+        with self._data_available:
+            while self._file_start_ns is None and not self._stop_event.is_set():
                 self._data_available.wait(timeout=0.02)
+            if self._file_start_ns is None:
+                return
 
         self._rename_output_files(self._file_start_ns)
 
-        while not self._stop_event.is_set():
+        while True:
             with self._data_available:
                 while self.read_idx >= self.write_idx and not self._stop_event.is_set():
                     self._data_available.wait(timeout=0.5)
@@ -107,7 +109,7 @@ class AudioWriter(threading.Thread):
         self._stop_event.set()
         with self._data_available:
             self._data_available.notify_all()
-        self.join(timeout=5.0)
+        self.join()
 
         self.wav_file.flush()
         self.wav_file.close()
