@@ -6,6 +6,7 @@ recordings:
 
 camera:
   sensor_mode: HDR # options: [HDR, high_res, medium_res, low_res]
+  # resolution: [1280, 720] # optional; defaults based on the selected sensor mode
   quality : MEDIUM  #VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW
 
 display:
