@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from picamera2 import Picamera2, Preview
 from picamera2.encoders import Quality, H264Encoder
 from picamera2.outputs import PyavOutput
-from libcamera import Transform
+from libcamera import Transform, controls
 from utilities import get_filename, get_stop_event, get_settings
 
 def script_args() -> dict[str, str]:
@@ -129,6 +129,23 @@ def configure_camera(camera_settings: dict) -> Picamera2:
 				f'at most {max_output_size} for H.264. Using the supported maximum.'
 			)
 		camera_settings['resolution'] = main_size
+	camera_controls = {'FrameRate': frame_rate}
+	autofocus = camera_settings.get('autofocus')
+	lens_position = camera_settings.get('lens_position')
+	if autofocus is not None and not isinstance(autofocus, bool):
+		raise ValueError('camera autofocus must be true or false')
+	if lens_position is not None:
+		if isinstance(lens_position, bool) or not isinstance(lens_position, (int, float)) or lens_position < 0:
+			raise ValueError('camera lens_position must be a non-negative number')
+		if autofocus is True:
+			raise ValueError('camera lens_position can only be set when autofocus is false')
+		camera_controls['AfMode'] = controls.AfModeEnum.Manual
+		camera_controls['LensPosition'] = float(lens_position)
+	elif autofocus is not None:
+		camera_controls['AfMode'] = (
+			controls.AfModeEnum.Continuous if autofocus else controls.AfModeEnum.Manual
+		)
+
 	config = picam2.create_video_configuration(
 		sensor={
 			'output_size': sensor_mode['size'],
@@ -136,7 +153,7 @@ def configure_camera(camera_settings: dict) -> Picamera2:
 		},
 		main={'size': main_size, 'format': 'YUV420'},
 		raw=None,
-		controls={'FrameRate': frame_rate}
+		controls=camera_controls
 	)
 	picam2.align_configuration(config) #set optimal image size for main stream
 	picam2.configure(config)
