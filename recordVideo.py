@@ -5,9 +5,10 @@ from typing import Optional
 from argparse import ArgumentParser
 from picamera2 import Picamera2, Preview
 from picamera2.encoders import Quality, H264Encoder
-from picamera2.outputs import PyavOutput
+from picamera2.outputs import FfmpegOutput
 from libcamera import Transform, controls
 from utilities import get_filename, get_stop_event, get_settings
+
 
 def script_args() -> dict[str, str]:
 	#Parse recording settings
@@ -52,11 +53,11 @@ def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str, fr
 	ext = '.mp4'
 	saveFile = get_filename(save_dir=save_dir, subfolder='cam', extension=ext).as_posix() #picamera2 requires string path
 	
-	output = PyavOutput(
-		output_name=saveFile,
-		pts = saveFile.replace(ext, '.pts')
+	output = FfmpegOutput(
+		output_filename=saveFile,
+		pts=saveFile.replace(ext, '.pts')
 		)
-	
+
 	picam2.start_recording(
 		output=output,
 		encoder=H264Encoder(framerate=int(round(frame_rate))),
