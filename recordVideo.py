@@ -22,6 +22,7 @@ def script_args() -> dict[str, str]:
 
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
+	stop_event = get_stop_event()
 	hardware_settings = get_settings()
 	camera_settings = hardware_settings['camera']
 
@@ -34,7 +35,6 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
 		frame_rate=camera_settings['frame_rate']
 	)
 
-	stop_event = get_stop_event()
 	if ready_event is not None:
 		ready_event.set()
 
