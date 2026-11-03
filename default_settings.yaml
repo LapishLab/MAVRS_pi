@@ -11,6 +11,11 @@ camera:
   # lens_position: 0.0 # optional manual focus; 0.0 is infinity, larger values focus closer
   quality : MEDIUM  #VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW
 
+streaming:
+  enable: False
+  port: 9000 # VLC: open tcp://<pi-address>:9000
+  queue_size: 16 # maximum encoded frames waiting for the viewer
+
 display:
   enable: True
   size_x: 800

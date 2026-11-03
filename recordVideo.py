@@ -1,13 +1,86 @@
 #!/usr/bin/python3
+from __future__ import annotations
+
+from multiprocessing import Process, get_context
 from multiprocessing.synchronize import Event
+from multiprocessing.queues import Queue
+from queue import Full
 import os
 from typing import Optional
 from argparse import ArgumentParser
 from picamera2 import Picamera2, Preview
 from picamera2.encoders import Quality, H264Encoder
-from picamera2.outputs import FfmpegOutput
+from picamera2.outputs import FfmpegOutput, Output
 from libcamera import Transform, controls
 from utilities import get_filename, get_stop_event, get_settings
+from videoStream import serve_video
+
+
+class StreamOutput(Output):
+	"""Offer encoded frames to the stream without waiting for a client."""
+
+	def __init__(self, frames: Queue[tuple[bytes, bool]], client_connected: Event) -> None:
+		super().__init__()
+		self.frames = frames
+		self.client_connected = client_connected
+		self.dropped_frames = 0
+		self.failed = False
+
+	def outputframe(self, frame: bytes, keyframe: bool = True, timestamp: int | None = None,
+			packet: object | None = None, audio: bool = False) -> None:
+		if self.recording and not self.failed:
+			try:
+				if not self.client_connected.is_set():
+					return
+				self.frames.put_nowait((frame, keyframe))
+			except Full:
+				self.dropped_frames += 1  # A slow viewer loses frames; the MP4 never waits.
+			except Exception:
+				self.failed = True  # A streaming error must not reach Picamera2's encoder.
+
+
+class StreamSession:
+	def __init__(self, stream_settings: dict) -> None:
+		frames = None
+		try:
+			context = get_context('spawn')
+			queue_size = stream_settings.get('queue_size', 16)
+			if not isinstance(queue_size, int) or queue_size < 1:
+				raise ValueError('streaming.queue_size must be a positive integer')
+			frames = context.Queue(maxsize=queue_size)
+			frames.cancel_join_thread()  # Never wait for disposable stream frames at exit.
+			client_connected = context.Event()
+			stream_stop = context.Event()
+			stream_process = context.Process(
+				target=serve_video,
+				args=(frames, client_connected, stream_stop, stream_settings.get('port', 9000)),
+				daemon=True,
+			)
+			output = StreamOutput(frames, client_connected)
+			stream_process.start()
+		except Exception:
+			if frames is not None:
+				frames.close()
+			raise
+
+		self.output = output
+		self.process = stream_process
+		self.frames = frames
+		self.client_connected = client_connected
+		self.stop_event = stream_stop
+
+	def stop(self) -> None:
+		if self.output.failed:
+			print('Video stream disabled after a queue error')
+		if self.output.dropped_frames:
+			print(f'Video stream dropped {self.output.dropped_frames} encoded frames')
+		self.client_connected.clear()
+		self.stop_event.set()
+		self.process.join(timeout=2)
+		if self.process.is_alive():
+			self.process.terminate()
+			self.process.join()
+		self.frames.close()
 
 
 def script_args() -> dict[str, str]:
@@ -25,6 +98,13 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
 	stop_event = get_stop_event()
 	hardware_settings = get_settings()
 	camera_settings = hardware_settings['camera']
+	stream: StreamSession | None = None
+	stream_settings = hardware_settings.get('streaming', {})
+	if stream_settings.get('enable', False):
+		try:
+			stream = StreamSession(stream_settings)
+		except Exception as exc:
+			print(f'Video stream unavailable: {exc}')
 
 	picam2 = configure_camera(camera_settings)
 	start_preview(picam2, hardware_settings['display'])
@@ -32,7 +112,8 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
 		picam2=picam2,
 		save_dir=save_dir,
 		quality=camera_settings['quality'],
-		frame_rate=camera_settings['frame_rate']
+		frame_rate=camera_settings['frame_rate'],
+		stream_output=stream.output if stream is not None else None,
 	)
 
 	if ready_event is not None:
@@ -43,12 +124,15 @@ def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) ->
 	stop_event.wait()
 	print('closing - recordVideo.py')
 	picam2.stop_recording()
+	if stream is not None:
+		stream.stop()
 	picam2.stop_preview()
 	picam2.stop()
 	print('finished - recordVideo.py')
 
 
-def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str, frame_rate: float = 30) -> str:
+def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str, frame_rate: float = 30,
+		stream_output: Optional[StreamOutput] = None) -> str:
 	picam2.start()
 	ext = '.mp4'
 	saveFile = get_filename(save_dir=save_dir, subfolder='cam', extension=ext).as_posix() #picamera2 requires string path
@@ -59,8 +143,8 @@ def start_recording(picam2: Picamera2, save_dir: Optional[str], quality: str, fr
 		)
 
 	picam2.start_recording(
-		output=output,
-		encoder=H264Encoder(framerate=int(round(frame_rate))),
+		output=[output, stream_output] if stream_output is not None else output,
+		encoder=H264Encoder(framerate=int(round(frame_rate)), repeat=True),
 		quality=Quality[quality])
 	print(f'Saving video to {saveFile}')
 	return saveFile
