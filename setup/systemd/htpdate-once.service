@@ -1,0 +1,11 @@
+[Unit]
+Description=Run htpdate once at startup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/htpdate -s www.google.com www.cloudflare.com www.microsoft.com
+
+[Install]
+WantedBy=multi-user.target

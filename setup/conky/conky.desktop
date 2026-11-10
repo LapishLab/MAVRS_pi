@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Conky
+Comment=Start Conky at login
+Exec=conky --daemonize --pause=5
+Terminal=false
+Categories=System;Monitor;

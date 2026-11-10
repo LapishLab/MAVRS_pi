@@ -1,3 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 install.sh text eol=lf
+setup/conky/* text eol=lf
+setup/optional/*.sh text eol=lf
+setup/pipewire/*.conf text eol=lf
+setup/systemd/*.service text eol=lf
