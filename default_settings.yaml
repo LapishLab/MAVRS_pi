@@ -6,9 +6,10 @@ recordings:
 
 camera:
   sensor_mode: HDR # options: [HDR, high_res, medium_res, low_res]
-  # resolution: [1280, 720] # optional; defaults based on the selected sensor mode
-  # autofocus: False # optional; true enables continuous autofocus
-  # lens_position: 0.0 # optional manual focus; 0.0 is infinity, larger values focus closer
+  frame_rate: null # e.g. 30 for a requested FPS; null uses the sensor mode's maximum
+  resolution: null # e.g. [1280, 720]; null uses the sensor mode-based resolution
+  autofocus: null # e.g. true for continuous, false for manual; null uses the camera default
+  lens_position: null # e.g. 0.0 for infinity; larger values focus closer
   quality : MEDIUM  #VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW
 
 streaming:
