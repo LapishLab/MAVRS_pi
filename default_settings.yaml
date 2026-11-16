@@ -4,6 +4,10 @@ recordings:
   audio: True
   gpio: True
 
+gpio:
+  pins:
+    Med: 16
+
 camera:
   sensor_mode: HDR # options: [HDR, high_res, medium_res, low_res]
   frame_rate: null # e.g. 30 for a requested FPS; null uses the sensor mode's maximum

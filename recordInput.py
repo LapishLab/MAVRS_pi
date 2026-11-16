@@ -1,16 +1,16 @@
 #! /bin/python
 from pathlib import Path
-from typing import Optional, TextIO
+from typing import Optional, TextIO, Mapping
 from argparse import ArgumentParser
 from gpiozero import Button 
 from datetime import datetime
 from csv import DictWriter
 from multiprocessing.synchronize import Event
-from utilities import get_stop_event, get_filename
+from utilities import get_stop_event, get_filename, get_settings
 from functools import partial
 
 def script_args() -> dict[str, str]:
-    parser = ArgumentParser(description='Record GPIO pin 16')
+    parser = ArgumentParser(description='Record configured GPIO pins')
     parser.add_argument('--saveDir', type=str, 
         help='Path within the Data folder to which data will be saved')
     args = parser.parse_args()
@@ -18,33 +18,34 @@ def script_args() -> dict[str, str]:
     return {k: v for k, v in vars(args).items() if v is not None}
 
 
-def start_recording(saveFile: str | Path, pins: list[int] = [16]) -> tuple[list[Button], 'TextIO']:
+def start_recording(saveFile: str | Path, pins: Mapping[str, int]) -> tuple[list[Button], 'TextIO']:
 
     # Open the CSV file and write the header
-    csvFields = ['Time', 'Pin', 'Event']
+    csvFields = ['Time', 'Name', 'Pin', 'Event']
     csvfile = open(saveFile, "w", newline='')
     writer = DictWriter(csvfile, fieldnames=csvFields)
     writer.writeheader()
 
-    def log_event(pin, event): 
+    def log_event(name, pin, event): 
         now = datetime.now()
         timeString = f"{now.year:04d}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}{now.second:02d}_{now.microsecond:06d}"
-        writer.writerow({'Time': timeString, 'Pin': pin, 'Event': event})
+        writer.writerow({'Time': timeString, 'Name': name, 'Pin': pin, 'Event': event})
         csvfile.flush() 
 
     # Set up the GPIO pins and add event detection 
     buttons = []
-    for pin in pins:
+    for name, pin in pins.items():
         b = Button(pin, bounce_time=None)
-        b.when_pressed = partial(log_event, pin, '0')
-        b.when_released = partial(log_event, pin, '1')
+        b.when_pressed = partial(log_event, name, pin, '0')
+        b.when_released = partial(log_event, name, pin, '1')
         buttons.append(b)
     return buttons, csvfile
 
 def main(save_dir: Optional[str] = None, ready_event: Optional[Event] = None) -> None:
     saveFile = get_filename(save_dir=save_dir, subfolder='gpio', extension='.csv')
     print(f'Saving GPIO data in {saveFile}')
-    buttons, csvfile = start_recording(saveFile)
+    pins = get_settings()['gpio']['pins']
+    buttons, csvfile = start_recording(saveFile, pins)
     stop_event = get_stop_event()
 
     

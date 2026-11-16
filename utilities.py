@@ -47,6 +47,8 @@ def get_settings() -> dict[str, Any]:
         user_settings = yaml.full_load(f)
 
     _deep_update(settings, user_settings)
+    if 'pins' in user_settings.get('gpio', {}):
+        settings['gpio']['pins'] = user_settings['gpio']['pins']
     return settings
 
 

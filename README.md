@@ -51,6 +51,21 @@ panel settings. Restart the panel or log out and back in to see the new format.
 Run the recorder with `.venv/bin/python3 startExperiment.py`. The central server
 already uses this path when starting a recording on a Pi.
 
+## GPIO inputs
+
+Set signal names and BCM pin numbers in `~/mavrs_pi_config.yaml`:
+
+```yaml
+gpio:
+  pins:
+    Med: 16
+    playback_sync: 20
+```
+
+The configured mapping replaces the default `Med: 16` mapping. Each GPIO
+event CSV row includes the signal name and pin number. If an existing settings
+file has `pins: [16]`, change it to the named mapping shown above.
+
 ## Live video
 
 Add the following to `~/mavrs_pi_config.yaml` to serve video while an experiment is recording:
