@@ -46,5 +46,13 @@ def get_settings() -> dict[str, Any]:
     with open(USER_SETTINGS_FILE, 'r') as f:
         user_settings = yaml.full_load(f)
 
-    settings.update(user_settings) # Overwrite default settings with any modified user settings
+    _deep_update(settings, user_settings)
     return settings
+
+
+def _deep_update(settings: dict[str, Any], overrides: dict[str, Any]) -> None:
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(settings.get(key), dict):
+            _deep_update(settings[key], value)
+        else:
+            settings[key] = value
