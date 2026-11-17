@@ -51,6 +51,14 @@ panel settings. Restart the panel or log out and back in to see the new format.
 Run the recorder with `.venv/bin/python3 startExperiment.py`. The central server
 already uses this path when starting a recording on a Pi.
 
+The parent monitors enabled GPIO, Audio, and Video processes. A recorder that
+exits or does not become ready within 60 seconds is marked failed while healthy
+recorders continue. If all enabled recorders fail, the parent exits with an
+error so the systemd unit fails. During a server-started run, inspect component
+health with `XDG_RUNTIME_DIR=/run/user/$(id -u) .venv/bin/python3
+recording_status.py --unit mavrs`. The status record lives in the user runtime
+directory, outside the recording data tree.
+
 ## GPIO inputs
 
 Set signal names and BCM pin numbers in `~/mavrs_pi_config.yaml`:

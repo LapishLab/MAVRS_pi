@@ -5,12 +5,24 @@ from typing import List, Optional
 from config import DATA_DIR, HOSTNAME
 from multiprocessing import Process, Event
 from utilities import get_settings
+from recording_status import write_status, refresh_worker_states
 import threading
 import recordAudio
 import recordVideo
 import recordInput
 import signal
-from time import time
+from time import time, monotonic
+
+
+MONITOR_INTERVAL = 0.5
+STATUS_INTERVAL = 2
+
+
+def run_worker(function, save_dir, ready_event):
+	# Forked children must not inherit the parent's stop handler during initialization.
+	for stop_signal in (signal.SIGINT, signal.SIGTERM):
+		signal.signal(stop_signal, signal.SIG_DFL)
+	function(save_dir=save_dir, ready_event=ready_event)
 
 def script_args() -> dict[str, str]:
 	parser = ArgumentParser(description='start an experiment')
@@ -20,7 +32,7 @@ def script_args() -> dict[str, str]:
 	# Filter out None values and return dict
 	return {k: v for k, v in vars(args).items() if v is not None}
 
-def main(session: Optional[str] = None) -> None:
+def main(session: Optional[str] = None) -> int:
 	if session is None:
 		session = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -28,39 +40,54 @@ def main(session: Optional[str] = None) -> None:
 
 	# Make a list of processes for each recording modality along with an Event for each to signal when they are ready
 	recordings = get_settings()['recordings']
-	funcs = [] # List of recording modalities function entry points
-	if recordings['gpio']: funcs.append(recordInput.main)
-	if recordings['audio']: funcs.append(recordAudio.main)
-	if recordings['video']: funcs.append(recordVideo.main)
+	funcs = {}
+	if recordings['gpio']: funcs['GPIO'] = recordInput.main
+	if recordings['audio']: funcs['Audio'] = recordAudio.main
+	if recordings['video']: funcs['Video'] = recordVideo.main
+	if not funcs:
+		raise RuntimeError('No recording components are enabled')
 
-	procs = []
-	ready_events = []
-	for f in funcs:
-		ready = Event()
-		p = Process(target=f, kwargs={'save_dir': saveDir, 'ready_event': ready})
-		p.start()
-		procs.append(p)
-		ready_events.append(ready)
-
-	# Wait for all child processes to signal they are ready
-	for r in ready_events:
-		r.wait()
-	print('All subprocesses successfully started')
-
-	# Define a signal handler to cleanly exit on interrupt
+	# Install the handler before startup so a stop during initialization is honored.
 	stop_event = threading.Event()
-	stop_func = lambda sig, frame: stop_event.set()
-	stop_signals = [signal.SIGINT, signal.SIGTERM]
-	[signal.signal(sig, stop_func) for sig in stop_signals]
-	
-	# Wait until interrupt, then terminate the subprocesses
-	print('Experiment started. Waiting for interrupt.')
-	stop_event.wait()
+	for stop_signal in (signal.SIGINT, signal.SIGTERM):
+		signal.signal(stop_signal, lambda sig, frame: stop_event.set())
 
-	# Clean up processes after signal
-	print("closing - startExperiment.py")
-	shutdown_all_workers(procs)
-	print("finished - startExperiment.py")
+	states = {name: {'state': 'starting', 'exit_code': None} for name in funcs}
+	write_status(session, states)
+	last_published = monotonic()
+	workers = {}
+	try:
+		for name, function in funcs.items():
+			if stop_event.is_set():
+				break
+			ready = Event()
+			process = Process(target=run_worker, args=(function, saveDir, ready))
+			try:
+				process.start()
+			except Exception as exc:
+				states[name] = {'state': 'failed', 'exit_code': None, 'reason': f'could not start: {exc}'}
+				print(f'{name} recorder failed to start: {exc}', flush=True)
+				continue
+			workers[name] = (process, ready, monotonic())
+
+		print('Experiment started. Monitoring recording components.')
+		while not stop_event.is_set():
+			changed = refresh_worker_states(workers, states)
+			if changed or monotonic() - last_published >= STATUS_INTERVAL:
+				try:
+					write_status(session, states)
+				except OSError as exc:
+					print(f'Could not publish recorder status: {exc}', flush=True)
+				last_published = monotonic()
+			if all(state['state'] == 'failed' for state in states.values()):
+				print('All recording components failed', flush=True)
+				return 1
+			stop_event.wait(MONITOR_INTERVAL)
+		return 0
+	finally:
+		print('closing - startExperiment.py')
+		shutdown_all_workers([process for process, _, _ in workers.values()])
+		print('finished - startExperiment.py')
 
 
 def shutdown_all_workers(procs: List[Process], timeout: float = 10) -> None:	
@@ -83,4 +110,4 @@ def shutdown_all_workers(procs: List[Process], timeout: float = 10) -> None:
 
 if __name__ == '__main__':
 	args = script_args()
-	main(**args)
+	raise SystemExit(main(**args))
