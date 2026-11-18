@@ -6,6 +6,7 @@ from config import DATA_DIR, HOSTNAME
 from multiprocessing import Process, Event
 from utilities import get_settings
 from recording_status import write_status, refresh_worker_states
+from recording_log import write_recording_log
 import threading
 import recordAudio
 import recordVideo
@@ -51,6 +52,8 @@ def main(session: Optional[str] = None) -> int:
 	stop_event = threading.Event()
 	for stop_signal in (signal.SIGINT, signal.SIGTERM):
 		signal.signal(stop_signal, lambda sig, frame: stop_event.set())
+
+	write_recording_log(saveDir)
 
 	states = {name: {'state': 'starting', 'exit_code': None} for name in funcs}
 	write_status(session, states)
